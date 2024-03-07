@@ -1,0 +1,18 @@
+[package]
+name = "rust-pgdatadiff-client"
+version = "0.1.2"
+edition = "2021"
+license = "MIT"
+description = "Rust client for comparing two PostgreSQL databases"
+readme = "../README.md"
+homepage = "https://github.com/pavlospt/rust-pgdatadiff"
+repository = "https://github.com/pavlospt/rust-pgdatadiff"
+keywords = ["postgres", "postgresql", "diff", "comparison"]
+documentation = "https://docs.rs/rust-pgdatadiff-client"
+
+[dependencies]
+anyhow = "1.0.81"
+clap = { version = "4.5.2", features = ["derive"] }
+tokio = "1.36.0"
+env_logger = "0.11.3"
+rust-pgdatadiff = { version = "0.1.2", path = ".." }
