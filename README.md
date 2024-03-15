@@ -96,17 +96,18 @@ use rust_pgdatadiff::diff::diff_payload::DiffPayload;
 async fn main() -> Result<()> {
   let first_db = "postgres://postgres:postgres@localhost:5438/example";
   let second_db = "postgres://postgres:postgres@localhost:5439/example";
-  
+
   let payload = DiffPayload::new(
     first_db.to_owned(),
     second_db.to_owned(),
-    *only_data,
-    *only_sequences,
-    *only_count,
-    *chunk_size,
-    *max_connections,
-    included_tables.to_vec(),
-    schema_name.clone(),
+    false, //only-tables
+    false, //only-sequences
+    false, //only-count
+    10_000, //chunk-size
+    100, //max-connections
+    vec!["table1", "table2"], //include-tables (mutually exclusive with exclude-tables)
+    vec!["table3", "table4"], //exclude-tables (mutually exclusive with include-tables)
+    "public", //schema
   );
   let diff_result = Differ::diff_dbs(payload).await;
   // Handle `diff_result` in any way it fits your use case
