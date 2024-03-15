@@ -1,9 +1,14 @@
 use anyhow::Result;
-use clap::{Parser, Subcommand};
+
+#[cfg(not(feature = "with-clap"))]
 use inquire::{Confirm, Text};
+
+#[cfg(feature = "with-clap")]
+use clap::{Parser, Subcommand};
 use rust_pgdatadiff::diff::diff_ops::Differ;
 use rust_pgdatadiff::diff::diff_payload::DiffPayload;
 
+#[cfg(feature = "with-clap")]
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 #[command(propagate_version = true)]
@@ -12,6 +17,7 @@ struct Cli {
     command: Commands,
 }
 
+#[cfg(feature = "with-clap")]
 #[derive(Subcommand)]
 enum Commands {
     #[command(about = "Print the version")]
@@ -48,45 +54,46 @@ enum Commands {
     },
 }
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    env_logger::init();
+#[cfg(feature = "with-clap")]
+async fn main_clap() -> Result<()> {
+    let cli = Cli::parse();
+    match &cli.command {
+        Commands::Version => {
+            println!("Version: {}", env!("CARGO_PKG_VERSION"));
+            Ok(())
+        }
+        Commands::Diff {
+            first_db,
+            second_db,
+            only_tables,
+            only_sequences,
+            only_count,
+            chunk_size,
+            max_connections,
+            include_tables,
+            exclude_tables,
+            schema_name,
+        } => {
+            let payload = DiffPayload::new(
+                first_db.clone(),
+                second_db.clone(),
+                *only_tables,
+                *only_sequences,
+                *only_count,
+                *chunk_size,
+                *max_connections,
+                include_tables.to_vec(),
+                exclude_tables.to_vec(),
+                schema_name.clone(),
+            );
+            let _ = Differ::diff_dbs(payload).await;
+            Ok(())
+        }
+    }
+}
 
-    // let cli = Cli::parse();
-    // match &cli.command {
-    //     Commands::Version => {
-    //         println!("Version: {}", env!("CARGO_PKG_VERSION"));
-    //         Ok(())
-    //     }
-    //     Commands::Diff {
-    //         first_db,
-    //         second_db,
-    //         only_tables,
-    //         only_sequences,
-    //         only_count,
-    //         chunk_size,
-    //         max_connections,
-    //         include_tables,
-    //         exclude_tables,
-    //         schema_name,
-    //     } => {
-    //         let payload = DiffPayload::new(
-    //             first_db.clone(),
-    //             second_db.clone(),
-    //             *only_tables,
-    //             *only_sequences,
-    //             *only_count,
-    //             *chunk_size,
-    //             *max_connections,
-    //             include_tables.to_vec(),
-    //             exclude_tables.to_vec(),
-    //             schema_name.clone(),
-    //         );
-    //         let _ = Differ::diff_dbs(payload).await;
-    //         Ok(())
-    //     }
-    // }
-
+#[cfg(not(feature = "with-clap"))]
+async fn main_inquire() -> Result<()> {
     let first_db = Text::new("First DB")
         .with_default("postgres://postgres:postgres@localhost:5438/example")
         .with_help_message("Enter the first database connection string")
@@ -136,10 +143,26 @@ async fn main() -> Result<()> {
         only_count,
         chunk_size.parse::<i64>().unwrap(),
         max_connections.parse::<i64>().unwrap(),
-        include_tables.trim().split_whitespace().into_iter().collect(),
-        exclude_tables.trim().split_whitespace().into_iter().collect(),
+        include_tables.split_whitespace().collect(),
+        exclude_tables.split_whitespace().collect(),
         schema_name,
     );
     let _ = Differ::diff_dbs(payload).await;
+    Ok(())
+}
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    env_logger::init();
+
+    #[cfg(feature = "with-clap")]
+    {
+        _ = main_clap().await;
+    }
+    #[cfg(not(feature = "with-clap"))]
+    {
+        _ = main_inquire().await;
+    }
+
     Ok(())
 }

@@ -1,6 +1,6 @@
 [package]
 name = "rust-pgdatadiff-client"
-version = "0.1.2"
+version = "0.1.7"
 edition = "2021"
 license = "MIT"
 description = "Rust client for comparing two PostgreSQL databases"
@@ -12,8 +12,13 @@ documentation = "https://docs.rs/rust-pgdatadiff-client"
 
 [dependencies]
 anyhow = "1.0.81"
-clap = { version = "4.5.2", features = ["derive"] }
+clap = { version = "4.5.2", features = ["derive"], optional = true }
 tokio = "1.36.0"
 env_logger = "0.11.3"
 rust-pgdatadiff = { version = "0.1.2", path = ".." }
-inquire = "0.7.1"
+inquire = { version = "0.7.1", optional = true }
+
+[features]
+default = ["with-inquire"]
+with-inquire = ["dep:inquire"]
+with-clap = ["dep:clap"]
