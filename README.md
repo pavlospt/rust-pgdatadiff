@@ -27,8 +27,20 @@ _The benchmarks below are based on DBs with 5 tables and 1M rows each. The resul
 
 In case you want to use this as a client you can install it through `cargo`:
 
+Client supports two features that allow you to choose between `Clap` or `Inquire` for running it.
+
+[![asciicast](https://asciinema.org/a/647065.svg)](https://asciinema.org/a/647065)
+
+## Clap
+
 ```shell
-cargo install rust-pgdatadiff-client
+cargo install rust-pgdatadiff-client --features with-clap
+```
+
+## Inquire
+
+```shell
+cargo install rust-pgdatadiff-client //or with `--features with-inquire`
 ```
 
 # Installation (Library)
@@ -43,12 +55,13 @@ or
 
 ```toml
 [dependencies]
-rust-pgdatadiff = "0.1.0"
+rust-pgdatadiff = "0.1"
 ```
 
 # Usage (Client)
 
-```
+## Clap
+```shell
 Usage: rust-pgdatadiff-client diff [OPTIONS] <FIRST_DB> <SECOND_DB>
 
 Arguments:
@@ -66,6 +79,11 @@ Options:
       --schema-name <SCHEMA_NAME>             Schema name [default: public]
   -h, --help                                  Print help
   -V, --version                               Print version
+```
+
+## Inquire
+```shell
+rust-pgdatadiff-client
 ```
 
 # Usage (Library)
