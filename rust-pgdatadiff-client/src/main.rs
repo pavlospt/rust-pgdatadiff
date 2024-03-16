@@ -143,8 +143,14 @@ async fn main_inquire() -> Result<()> {
         only_count,
         chunk_size.parse::<i64>().unwrap(),
         max_connections.parse::<i64>().unwrap(),
-        include_tables.split_whitespace().collect(),
-        exclude_tables.split_whitespace().collect(),
+        include_tables
+            .split_whitespace()
+            .flat_map(|t| t.split(','))
+            .collect(),
+        exclude_tables
+            .split_whitespace()
+            .flat_map(|t| t.split(','))
+            .collect(),
         schema_name,
     );
     let _ = Differ::diff_dbs(payload).await;
