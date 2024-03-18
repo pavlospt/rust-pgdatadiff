@@ -1,0 +1,105 @@
+name: Manual Release
+
+on: [pull_request]
+  # workflow_dispatch:
+  #   inputs:
+  #     version:
+  #       description: 'The version to release'
+  #       required: true
+  #       default: ''
+
+env:
+  VERSION: '0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  create-release:
+    name: create-release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create ${{ env.VERSION }} --draft --title ${{ env.VERSION }}
+    outputs:
+      version: ${{ env.VERSION }}
+
+  build-release:
+    name: build-release
+    needs: ['create-release']
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - build: linux
+          os: ubuntu-latest
+          rust: nightly
+          target: x86_64-unknown-linux-musl
+        - build: linux-aarch64
+          os: ubuntu-latest
+          rust: stable
+          target: aarch64-unknown-linux-gnu
+        - build: macos
+          os: macos-latest
+          rust: nightly
+          target: x86_64-apple-darwin
+        - build: macos-m2
+          os: flyci-macos-large-latest-m2
+          rust: nightly
+          target: aarch64-apple-darwin
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    - name: Setup Rust Toolchain for GitHub CI
+      uses: actions-rust-lang/setup-rust-toolchain@v1.8.0
+      with:
+        toolchain: ${{ matrix.rust }}
+    - name: Set target variables
+      shell: bash
+      run: |
+        echo "TARGET_FLAGS=--target ${{ matrix.target }}" >> $GITHUB_ENV
+        echo "TARGET_DIR=./target/${{ matrix.target }}" >> $GITHUB_ENV
+    - name: Build release binary
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: |
+        cargo build --verbose --release ${{ env.TARGET_FLAGS }}
+        bin="target/${{ matrix.target }}/release/rust-pgdatadiff-client"
+        echo "BIN=$bin" >> $GITHUB_ENV
+    - name: Strip release binary (macos)
+      if: matrix.os == 'macos-latest' || matrix.os == 'flyci-macos-large-latest-m2'
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: strip "$BIN"
+    - name: Determine archive name
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        echo "ARCHIVE=rust-pgdatadiff-client-$version-${{ matrix.target }}" >> $GITHUB_ENV
+    - name: Creating directory for archive
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: |
+        mkdir -p "$ARCHIVE"
+        cp "$BIN" "$ARCHIVE"/
+    - name: Build archive (Unix)
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: |
+        tar czf "$ARCHIVE.tar.gz" "$ARCHIVE"
+        shasum -a 256 "$ARCHIVE.tar.gz" > "$ARCHIVE.tar.gz.sha256"
+        echo "ASSET=$ARCHIVE.tar.gz" >> $GITHUB_ENV
+        echo "ASSET_SUM=$ARCHIVE.tar.gz.sha256" >> $GITHUB_ENV
+    - name: Upload release archive
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      shell: bash
+      working-directory: rust-pgdatadiff-client
+      run: |
+        version="${{ needs.create-release.outputs.version }}"
+        gh release upload "$version" ${{ env.ASSET }} ${{ env.ASSET_SUM }}

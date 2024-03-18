@@ -18,9 +18,11 @@
 _The benchmarks below are based on DBs with 5 tables and 1M rows each. The results are as follows:_
 
 ## Python (sequential)
+
 ![python-timings](images/python.png)
 
 ## Rust (parallel)
+
 ![rust-timings](images/rust.png)
 
 # Installation (Client)
@@ -61,6 +63,7 @@ rust-pgdatadiff = "0.1"
 # Usage (Client)
 
 ## Clap
+
 ```shell
 Usage: rust-pgdatadiff-client diff [OPTIONS] <FIRST_DB> <SECOND_DB>
 
@@ -82,6 +85,7 @@ Options:
 ```
 
 ## Inquire
+
 ```shell
 rust-pgdatadiff-client
 ```
