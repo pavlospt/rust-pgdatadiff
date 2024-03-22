@@ -1,0 +1,26 @@
+name: OSV Scan
+
+on: push
+
+jobs:
+  extract-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: "upload Cargo.lock"
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-lock
+          path: Cargo.lock
+          retention-days: 2
+  vuln-scan:
+    name: Vulnerability scanning
+    needs: extract-deps
+    uses: "google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v1.6.2-beta1"
+    with:
+      download-artifact: cargo-lock
+      scan-args: |-
+        --lockfile=Cargo.lock
+    permissions:
+      security-events: write
+      contents: read
