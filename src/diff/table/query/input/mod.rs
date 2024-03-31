@@ -1,6 +1,7 @@
 use super::table_types::{TableName, TableOffset, TablePosition, TablePrimaryKeys};
 use crate::diff::types::SchemaName;
 
+
 /// Represents the input for querying the count of a table.
 pub struct QueryTableCountInput {
     schema_name: SchemaName,

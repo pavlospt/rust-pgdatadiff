@@ -76,6 +76,8 @@ use crate::diff::table::query::table_types::{IncludedExcludedTables, TableName};
 
 #[cfg(test)]
 use mockall::automock;
+use rayon::iter::ParallelIterator;
+use rayon::prelude::{IntoParallelIterator};
 
 #[cfg_attr(test, automock)]
 #[async_trait]
@@ -135,7 +137,7 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
 
         // Map query results to [Vec<String>]
         query_result
-            .iter()
+            .into_par_iter()
             .map(|row| row.get("table_name"))
             .collect::<Vec<String>>()
     }
@@ -156,7 +158,7 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
 
         // Map query results to [Vec<String>]
         query_result
-            .iter()
+            .into_par_iter()
             .map(|row| row.get("attname"))
             .collect::<Vec<String>>()
     }

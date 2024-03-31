@@ -16,6 +16,8 @@ use log::{debug, info};
 
 use crate::diff::diff_output::DiffOutput;
 use crate::diff::types::SchemaName;
+use rayon::iter::{ParallelIterator};
+use rayon::prelude::IntoParallelIterator;
 use std::time::Instant;
 
 pub struct TableDiffer<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor> {
@@ -23,7 +25,7 @@ pub struct TableDiffer<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourc
     dual_table_query_executor: DTQE,
 }
 
-impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
+impl<TQE: TableSingleSourceQueryExecutor + Sync, DTQE: TableDualSourceQueryExecutor + Sync>
     TableDiffer<TQE, DTQE>
 {
     pub fn new(single_table_query_executor: TQE, dual_table_query_executor: DTQE) -> Self {
@@ -42,107 +44,111 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
 
         let sorted_tables = tables.to_owned();
 
-        let futures = sorted_tables.iter().map(|table_name| async {
-            let start = Instant::now();
+        let futures = sorted_tables
+            .into_par_iter()
+            .map(|table_name| async move {
+                let start = Instant::now();
 
-            // Start loading counts for table from both DBs
-            let query_count_input = QueryTableCountInput::new(
-                SchemaName::new(diff_payload.schema_name().to_string()),
-                TableName::new(table_name.to_string()),
-            );
+                // Start loading counts for table from both DBs
+                let query_count_input = QueryTableCountInput::new(
+                    SchemaName::new(diff_payload.schema_name().to_string()),
+                    TableName::new(table_name.to_string()),
+                );
 
-            let table_counts_start = Instant::now();
-            let (first_result, second_result) = self
-                .dual_table_query_executor
-                .query_table_count(query_count_input)
-                .await;
+                let table_counts_start = Instant::now();
+                let (first_result, second_result) = self
+                    .dual_table_query_executor
+                    .query_table_count(query_count_input)
+                    .await;
 
-            let table_counts_elapsed = table_counts_start.elapsed();
-            debug!(
-                "Table counts for {} loaded in: {}ms",
-                table_name.clone(),
-                table_counts_elapsed.as_millis()
-            );
+                let table_counts_elapsed = table_counts_start.elapsed();
+                debug!(
+                    "Table counts for {} loaded in: {}ms",
+                    table_name.clone(),
+                    table_counts_elapsed.as_millis()
+                );
 
-            debug!(
-                "{}",
-                format!("Analyzing table: {}", table_name.clone())
-                    .yellow()
-                    .bold()
-            );
+                debug!(
+                    "{}",
+                    format!("Analyzing table: {}", table_name.clone())
+                        .yellow()
+                        .bold()
+                );
 
-            // Start counts comparison
-            let table_diff_result = Self::extract_result(table_name, first_result, second_result);
+                // Start counts comparison
+                let table_diff_result =
+                    Self::extract_result(table_name.as_str(), first_result, second_result);
 
-            let elapsed = start.elapsed();
-            debug!(
-                "{}",
-                format!("Table analysis completed in: {}ms", elapsed.as_millis())
-            );
+                let elapsed = start.elapsed();
+                debug!(
+                    "{}",
+                    format!("Table analysis completed in: {}ms", elapsed.as_millis())
+                );
 
-            debug!("##############################################");
+                debug!("##############################################");
 
-            // If we only care about counts, return the result
-            if diff_payload.only_count() {
-                return table_diff_result;
-            }
-
-            // If the diff result permits us to skip data comparison, return the result
-            if table_diff_result.skip_table_diff() {
-                return table_diff_result;
-            }
-
-            let query_primary_keys_input = QueryPrimaryKeysInput::new(table_name.clone());
-
-            let primary_keys = self
-                .single_table_query_executor
-                .query_primary_keys(query_primary_keys_input)
-                .await;
-
-            // If no primary keys found, return the result
-            if primary_keys.is_empty() {
-                let table_diff_result = TableDiffOutput::NoPrimaryKeyFound(table_name.clone());
-                return table_diff_result;
-            }
-
-            // Prepare the primary keys for the table
-            // Will be used for query ordering when hashing data
-            let primary_keys = primary_keys.as_slice().join(",");
-
-            let total_rows = match table_diff_result {
-                TableDiffOutput::NoCountDiff(_, rows) => rows,
-                _ => {
-                    // Since we do not expect to reach here, print the result and panic
-                    panic!("Unexpected table diff result")
+                // If we only care about counts, return the result
+                if diff_payload.only_count() {
+                    return table_diff_result;
                 }
-            };
 
-            let schema_name = SchemaName::new(diff_payload.schema_name().to_string());
-            let query_table_name = TableName::new(table_name.clone());
-            let table_offset = TableOffset::new(diff_payload.chunk_size());
-            let table_primary_keys = TablePrimaryKeys::new(primary_keys);
+                // If the diff result permits us to skip data comparison, return the result
+                if table_diff_result.skip_table_diff() {
+                    return table_diff_result;
+                }
 
-            let start = Instant::now();
+                let query_primary_keys_input = QueryPrimaryKeysInput::new(table_name.clone());
 
-            if let Some(value) = self
-                .diff_table_data(
-                    diff_payload,
-                    schema_name,
-                    query_table_name,
-                    table_offset,
-                    table_primary_keys,
-                    total_rows,
-                    start,
-                )
-                .await
-            {
-                return value;
-            }
+                let primary_keys = self
+                    .single_table_query_executor
+                    .query_primary_keys(query_primary_keys_input)
+                    .await;
 
-            let elapsed = start.elapsed();
+                // If no primary keys found, return the result
+                if primary_keys.is_empty() {
+                    let table_diff_result = TableDiffOutput::NoPrimaryKeyFound(table_name.clone());
+                    return table_diff_result;
+                }
 
-            TableDiffOutput::NoDiffWithDuration(table_name.clone(), elapsed)
-        });
+                // Prepare the primary keys for the table
+                // Will be used for query ordering when hashing data
+                let primary_keys = primary_keys.as_slice().join(",");
+
+                let total_rows = match table_diff_result {
+                    TableDiffOutput::NoCountDiff(_, rows) => rows,
+                    _ => {
+                        // Since we do not expect to reach here, print the result and panic
+                        panic!("Unexpected table diff result")
+                    }
+                };
+
+                let schema_name = SchemaName::new(diff_payload.schema_name().to_string());
+                let query_table_name = TableName::new(table_name.clone());
+                let table_offset = TableOffset::new(diff_payload.chunk_size());
+                let table_primary_keys = TablePrimaryKeys::new(primary_keys);
+
+                let start = Instant::now();
+
+                if let Some(value) = self
+                    .diff_table_data(
+                        diff_payload,
+                        schema_name,
+                        query_table_name,
+                        table_offset,
+                        table_primary_keys,
+                        total_rows,
+                        start,
+                    )
+                    .await
+                {
+                    return value;
+                }
+
+                let elapsed = start.elapsed();
+
+                TableDiffOutput::NoDiffWithDuration(table_name.clone(), elapsed)
+            })
+            .collect::<Vec<_>>();
 
         info!(
             "{}",
