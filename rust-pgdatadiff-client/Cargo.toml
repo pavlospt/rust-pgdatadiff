@@ -12,7 +12,7 @@ documentation = "https://docs.rs/rust-pgdatadiff-client"
 
 [dependencies]
 anyhow = "1.0.81"
-clap = { version = "4.5.3", features = ["derive"], optional = true }
+clap = { version = "4.5.4", features = ["derive"], optional = true }
 tokio = "1.36.0"
 env_logger = "0.11.3"
 rust-pgdatadiff = { version = "0.1.2", path = ".." }
