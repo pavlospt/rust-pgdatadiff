@@ -12,7 +12,7 @@ documentation = "https://docs.rs/rust-pgdatadiff"
 
 [dependencies]
 anyhow = "1.0.81"
-tokio = { version = "1.36.0", features = ["full"] }
+tokio = { version = "1.37.0", features = ["full"] }
 sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres"] }
 colored = "2.1.0"
 futures = { version = "0.3.30", default-features = true, features = ["async-await"] }
@@ -27,7 +27,7 @@ features = ["derive"]
 
 [dev-dependencies]
 mockall = "0.12.1"
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.37.0", features = ["rt-multi-thread", "macros"] }
 
 [lib]
 test = true
