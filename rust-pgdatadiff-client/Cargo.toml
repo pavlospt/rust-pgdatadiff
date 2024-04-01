@@ -16,7 +16,7 @@ clap = { version = "4.5.4", features = ["derive"], optional = true }
 tokio = "1.36.0"
 env_logger = "0.11.3"
 rust-pgdatadiff = { version = "0.1.2", path = ".." }
-inquire = { version = "0.7.3", optional = true }
+inquire = { version = "0.7.4", optional = true }
 
 [features]
 default = ["with-inquire"]
