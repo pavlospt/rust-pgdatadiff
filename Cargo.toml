@@ -22,7 +22,7 @@ async-trait = "0.1.79"
 pretty_assertions = "1.4.0"
 
 [dependencies.clap]
-version = "4.5.3"
+version = "4.5.4"
 features = ["derive"]
 
 [dev-dependencies]
