@@ -39,6 +39,9 @@ enum Commands {
         /// The chunk size when comparing data
         #[arg(long, default_value_t = 10000, required = false)]
         chunk_size: i64,
+        /// The start position for the comparison
+        #[arg(long, default_value_t = 0, required = false)]
+        start_position: i64,
         /// Max connections for Postgres pool
         #[arg(long, default_value_t = 100, required = false)]
         max_connections: i64,
@@ -69,6 +72,7 @@ async fn main_clap() -> Result<()> {
             only_sequences,
             only_count,
             chunk_size,
+            start_position,
             max_connections,
             include_tables,
             exclude_tables,
@@ -81,6 +85,7 @@ async fn main_clap() -> Result<()> {
                 *only_sequences,
                 *only_count,
                 *chunk_size,
+                *start_position,
                 *max_connections,
                 include_tables.to_vec(),
                 exclude_tables.to_vec(),
@@ -118,6 +123,10 @@ async fn main_inquire() -> Result<()> {
         .with_default("10000")
         .with_help_message("Enter the chunk size when comparing data")
         .prompt()?;
+    let start_position = Text::new("Start position for the comparison")
+        .with_default("0")
+        .with_help_message("Enter the start position for the comparison")
+        .prompt()?;
     let max_connections = Text::new("Number of DB connections to utilize")
         .with_default("100")
         .with_help_message("Enter the max connections for Postgres pool")
@@ -142,6 +151,7 @@ async fn main_inquire() -> Result<()> {
         only_sequences,
         only_count,
         chunk_size.parse::<i64>().unwrap(),
+        start_position.parse::<i64>().unwrap(),
         max_connections.parse::<i64>().unwrap(),
         include_tables
             .split_whitespace()

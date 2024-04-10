@@ -6,6 +6,7 @@ pub struct DiffPayload {
     only_sequences: bool,
     only_count: bool,
     chunk_size: i64,
+    start_position: i64,
     max_connections: i64,
     include_tables: Vec<String>,
     exclude_tables: Vec<String>,
@@ -23,6 +24,7 @@ impl DiffPayload {
     /// * `only_sequences` - A flag indicating whether to compare only sequences.
     /// * `count_only` - A flag indicating whether to count differences only.
     /// * `chunk_size` - The chunk size for processing large tables.
+    /// * `start_position` - The start position for the comparison.
     /// * `max_connections` - The maximum number of database connections to use.
     /// * `include_tables` - A list of tables to include in the comparison.
     /// * `exclude_tables` - A list of tables to exclude in the comparison.
@@ -39,6 +41,7 @@ impl DiffPayload {
         only_sequences: bool,
         only_count: bool,
         chunk_size: i64,
+        start_position: i64,
         max_connections: i64,
         include_tables: Vec<impl Into<String>>,
         exclude_tables: Vec<impl Into<String>>,
@@ -58,6 +61,7 @@ impl DiffPayload {
             only_sequences,
             only_count,
             chunk_size,
+            start_position,
             max_connections,
             include_tables: include_tables.into_iter().map(|t| t.into()).collect(),
             exclude_tables: exclude_tables.into_iter().map(|t| t.into()).collect(),
@@ -82,6 +86,9 @@ impl DiffPayload {
     }
     pub fn chunk_size(&self) -> i64 {
         self.chunk_size
+    }
+    pub fn start_position(&self) -> i64 {
+        self.start_position
     }
     pub fn max_connections(&self) -> u32 {
         self.max_connections as u32
@@ -111,6 +118,7 @@ mod tests {
             false,
             false,
             10000,
+            0,
             10,
             vec!["table1"],
             vec!["table2"],
