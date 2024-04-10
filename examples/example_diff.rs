@@ -38,6 +38,9 @@ enum Commands {
         /// The chunk size when comparing data
         #[arg(long, default_value_t = 10000, required = false)]
         chunk_size: i64,
+        /// The start position for the comparison
+        #[arg(long, default_value_t = 0, required = false)]
+        start_position: i64,
         /// Max connections for Postgres pool
         #[arg(long, default_value_t = 100, required = false)]
         max_connections: i64,
@@ -70,6 +73,7 @@ async fn main() -> Result<()> {
             only_sequences,
             only_count,
             chunk_size,
+            start_position,
             max_connections,
             include_tables,
             exclude_tables,
@@ -82,6 +86,7 @@ async fn main() -> Result<()> {
                 *only_sequences,
                 *only_count,
                 *chunk_size,
+                *start_position,
                 *max_connections,
                 include_tables.to_vec(),
                 exclude_tables.to_vec(),

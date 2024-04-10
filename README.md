@@ -73,6 +73,7 @@ Options:
       --only-sequences                        Only compare sequences, exclude data
       --only-count                            Do a quick test based on counts alone
       --chunk-size <CHUNK_SIZE>               The chunk size when comparing data [default: 10000]
+      --start-position <START_POSITION>       The start position for the comparison [default: 0]
       --max-connections <MAX_CONNECTIONS>     Max connections for Postgres pool [default: 100]
   -i, --include-tables [<INCLUDE_TABLES>...]  Tables included in the comparison
   -e, --exclude-tables [<EXCLUDE_TABLES>...]  Tables excluded from the comparison
@@ -104,6 +105,7 @@ async fn main() -> Result<()> {
     false, //only-sequences
     false, //only-count
     10_000, //chunk-size
+    0, //start-position
     100, //max-connections
     vec!["table1", "table2"], //include-tables (mutually exclusive with exclude-tables)
     vec!["table3", "table4"], //exclude-tables (mutually exclusive with include-tables)

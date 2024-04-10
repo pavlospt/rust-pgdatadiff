@@ -227,7 +227,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
         start: Instant,
     ) -> Option<TableDiffOutput> {
         // Start data comparison
-        let mut position = 0;
+        let mut position = diff_payload.start_position();
         while position <= total_rows {
             let input = QueryHashDataInput::new(
                 schema_name.clone(),
