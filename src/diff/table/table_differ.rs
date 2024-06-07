@@ -64,7 +64,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 table_counts_elapsed.as_millis()
             );
 
-            debug!(
+            info!(
                 "{}",
                 format!("Analyzing table: {}", table_name.clone())
                     .yellow()

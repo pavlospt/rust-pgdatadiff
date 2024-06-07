@@ -52,6 +52,12 @@ enum Commands {
         /// Schema name
         #[arg(long, default_value = "public", required = false)]
         schema_name: String,
+        /// Accept invalid TLS certificates for the first database
+        #[arg(long, default_value_t = false, required = false)]
+        accept_invalid_certs_first_db: bool,
+        /// Accept invalid TLS certificates for the second database
+        #[arg(long, default_value_t = false, required = false)]
+        accept_invalid_certs_second_db: bool,
     },
 }
 
@@ -77,6 +83,8 @@ async fn main() -> Result<()> {
             include_tables,
             exclude_tables,
             schema_name,
+            accept_invalid_certs_first_db,
+            accept_invalid_certs_second_db,
         } => {
             let payload = DiffPayload::new(
                 first_db.clone(),
@@ -90,6 +98,8 @@ async fn main() -> Result<()> {
                 include_tables.to_vec(),
                 exclude_tables.to_vec(),
                 schema_name.clone(),
+                *accept_invalid_certs_first_db,
+                *accept_invalid_certs_second_db,
             );
             let _ = Differ::diff_dbs(payload).await;
             Ok(())
