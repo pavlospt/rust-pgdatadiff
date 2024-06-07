@@ -1,6 +1,6 @@
 [package]
 name = "rust-pgdatadiff-client"
-version = "0.1.11"
+version = "0.1.13"
 edition = "2021"
 license = "MIT"
 description = "Rust client for comparing two PostgreSQL databases"

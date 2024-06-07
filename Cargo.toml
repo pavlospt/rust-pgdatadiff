@@ -1,6 +1,6 @@
 [package]
 name = "rust-pgdatadiff"
-version = "0.1.5"
+version = "0.1.6"
 edition = "2021"
 license = "MIT"
 description = "Rust library for comparing two PostgreSQL databases"
@@ -27,7 +27,9 @@ tracing-subscriber = "0.3.18"
 tracing = "0.1.40"
 cargo-nextest = "0.9.72"
 deadpool-postgres = "0.14.0"
-rust-pgdatadiff = { path = ".", version = "0.1.5" }
+postgres-native-tls = "0.5.0"
+native-tls = "0.2.12"
+rust-pgdatadiff = { path = ".", version = "0.1.6" }
 
 [dependencies]
 anyhow.workspace = true
@@ -40,6 +42,8 @@ tracing-subscriber.workspace = true
 tracing.workspace = true
 cargo-nextest.workspace = true
 deadpool-postgres.workspace = true
+postgres-native-tls.workspace = true
+native-tls.workspace = true
 
 [dependencies.clap]
 version = "4.5.4"

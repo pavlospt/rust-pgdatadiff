@@ -35,6 +35,8 @@ mod tests {
             vec!["table1", "table2"],
             EMPTY_STRING_VEC,
             "schema_name",
+            false,
+            false,
         );
 
         let tables = table_differ.get_all_tables(&diff_payload).await.unwrap();
@@ -80,6 +82,8 @@ mod tests {
             vec!["table1", "table2"],
             EMPTY_STRING_VEC,
             "schema_name",
+            false,
+            false,
         );
 
         let diff_output = table_differ
@@ -145,6 +149,8 @@ mod tests {
             vec!["table1", "table2"],
             EMPTY_STRING_VEC,
             "schema_name",
+            false,
+            false,
         );
 
         let diff_output = table_differ

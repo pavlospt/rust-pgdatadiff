@@ -28,9 +28,23 @@ impl Differ {
     pub async fn diff_dbs(diff_payload: DiffPayload) -> Result<Vec<DiffOutput>> {
         info!("{}", "Initiating DB diffing…".bold().blue());
 
+        let tls_connector = if diff_payload.any_accept_invalid_certs() {
+            use native_tls::TlsConnector;
+            use postgres_native_tls::MakeTlsConnector;
+
+            let tls_connector = TlsConnector::builder()
+                .danger_accept_invalid_certs(true)
+                .build()
+                .unwrap();
+
+            Some(MakeTlsConnector::new(tls_connector))
+        } else {
+            None
+        };
+
         let mut first_cfg = Config::new();
         first_cfg.url = Some(diff_payload.first_db().to_string());
-        // first_cfg.application_name = Some(String::from("rust-pgdatadiff"));
+        first_cfg.application_name = Some(String::from("rust-pgdatadiff"));
         first_cfg.pool = Some(PoolConfig::new(diff_payload.max_connections() as usize));
         first_cfg.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
@@ -38,19 +52,31 @@ impl Differ {
 
         let mut second_cfg = Config::new();
         second_cfg.url = Some(diff_payload.second_db().to_string());
-        // second_cfg.application_name = Some(String::from("rust-pgdatadiff"));
+        second_cfg.application_name = Some(String::from("rust-pgdatadiff"));
         second_cfg.pool = Some(PoolConfig::new(diff_payload.max_connections() as usize));
         second_cfg.manager = Some(ManagerConfig {
             recycling_method: RecyclingMethod::Fast,
         });
 
         info!("{}", "Connected to first DB".magenta().bold());
-        let first_db_pool = first_cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
+        let first_db_pool = if diff_payload.accept_invalid_certs_first_db() {
+            first_cfg
+                .create_pool(Some(Runtime::Tokio1), tls_connector.clone().unwrap())
+                .unwrap()
+        } else {
+            first_cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap()
+        };
 
         info!("{}", "Connected to second DB".magenta().bold());
-        let second_db_pool = second_cfg
-            .create_pool(Some(Runtime::Tokio1), NoTls)
-            .unwrap();
+        let second_db_pool = if diff_payload.accept_invalid_certs_second_db() {
+            second_cfg
+                .create_pool(Some(Runtime::Tokio1), tls_connector.unwrap())
+                .unwrap()
+        } else {
+            second_cfg
+                .create_pool(Some(Runtime::Tokio1), NoTls)
+                .unwrap()
+        };
 
         let db_clients = DBClients::new(first_db_pool, second_db_pool);
 
