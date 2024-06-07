@@ -66,7 +66,7 @@
 /// ```
 use anyhow::Result;
 use async_trait::async_trait;
-use sqlx::{Pool, Postgres, Row};
+use deadpool_postgres::Pool;
 
 use crate::diff::table::query::input::{
     QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput,
@@ -105,20 +105,20 @@ pub trait TableSingleSourceQueryExecutor {
 }
 
 pub struct TableSingleSourceQueryExecutorImpl {
-    db_client: Pool<Postgres>,
+    db_pool: Pool,
 }
 
 impl TableSingleSourceQueryExecutorImpl {
-    pub fn new(db_client: Pool<Postgres>) -> Self {
-        Self { db_client }
+    pub fn new(db_pool: Pool) -> Self {
+        Self { db_pool }
     }
 }
 
 #[async_trait]
 impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
     async fn query_table_names(&self, input: QueryTableNamesInput) -> Vec<String> {
-        // Clone the database client
-        let pool = self.db_client.clone();
+        // Acquire the database client
+        let client = self.db_pool.get().await.unwrap();
 
         // Prepare the query for fetching table names
         let all_tables_query = TableQuery::AllTablesForSchema(
@@ -127,11 +127,10 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
         );
 
         // Fetch table names
-        let query_result = sqlx::query(all_tables_query.to_string().as_str())
-            .bind(input.schema_name().name())
-            .fetch_all(&pool)
+        let query_result = client
+            .query(&all_tables_query.to_string(), &[])
             .await
-            .unwrap_or(vec![]);
+            .unwrap();
 
         // Map query results to [Vec<String>]
         query_result
@@ -141,18 +140,18 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
     }
 
     async fn query_primary_keys(&self, input: QueryPrimaryKeysInput) -> Vec<String> {
-        // Clone the database client
-        let pool = self.db_client.clone();
+        // Acquire the database client
+        let client = self.db_pool.get().await.unwrap();
 
         // Prepare the query for primary keys fetching
         let find_primary_key_query =
             TableQuery::FindPrimaryKeyForTable(TableName::new(input.table_name()));
 
         // Fetch primary keys for the table
-        let query_result = sqlx::query(find_primary_key_query.to_string().as_str())
-            .fetch_all(&pool)
+        let query_result = client
+            .query(&find_primary_key_query.to_string(), &[])
             .await
-            .unwrap_or(vec![]);
+            .unwrap();
 
         // Map query results to [Vec<String>]
         query_result
@@ -190,12 +189,12 @@ pub trait TableDualSourceQueryExecutor {
 }
 
 pub struct TableDualSourceQueryExecutorImpl {
-    first_db_client: Pool<Postgres>,
-    second_db_client: Pool<Postgres>,
+    first_db_client: Pool,
+    second_db_client: Pool,
 }
 
 impl TableDualSourceQueryExecutorImpl {
-    pub fn new(first_db_client: Pool<Postgres>, second_db_client: Pool<Postgres>) -> Self {
+    pub fn new(first_db_client: Pool, second_db_client: Pool) -> Self {
         Self {
             first_db_client,
             second_db_client,
@@ -207,8 +206,8 @@ impl TableDualSourceQueryExecutorImpl {
 impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
     async fn query_table_count(&self, input: QueryTableCountInput) -> (Result<i64>, Result<i64>) {
         // Clone the database clients
-        let first_pool = self.first_db_client.clone();
-        let second_pool = self.second_db_client.clone();
+        let first_client = self.first_db_client.get().await.unwrap();
+        let second_client = self.second_db_client.get().await.unwrap();
 
         // Prepare the query for counting rows
         let count_rows_query = TableQuery::CountRowsForTable(
@@ -219,8 +218,8 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
         let count_query_binding = count_rows_query.to_string();
 
         // Prepare count queries for both databases
-        let first_count = sqlx::query(count_query_binding.as_str()).fetch_one(&first_pool);
-        let second_count = sqlx::query(count_query_binding.as_str()).fetch_one(&second_pool);
+        let first_count = first_client.query_one(&count_query_binding, &[]);
+        let second_count = second_client.query_one(&count_query_binding, &[]);
 
         // Fetch counts for both databases
         let count_fetch_futures = futures::future::join_all(vec![first_count, second_count]).await;
@@ -230,12 +229,12 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
         // Map count results to [anyhow::Result<i64>]
         let first_count: Result<i64> = match first_count {
-            Ok(pg_row) => Ok(pg_row.try_get::<i64, _>("count").unwrap()),
+            Ok(pg_row) => Ok(pg_row.get("count")),
             Err(_e) => Err(anyhow::anyhow!("Failed to fetch count for first table")),
         };
 
         let second_count: Result<i64> = match second_count {
-            Ok(pg_row) => Ok(pg_row.try_get::<i64, _>("count").unwrap()),
+            Ok(pg_row) => Ok(pg_row.get("count")),
             Err(_e) => Err(anyhow::anyhow!("Failed to fetch count for second table")),
         };
 
@@ -244,8 +243,8 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
     async fn query_hash_data(&self, input: QueryHashDataInput) -> (String, String) {
         // Clone the database clients
-        let first_pool = self.first_db_client.clone();
-        let second_pool = self.second_db_client.clone();
+        let first_client = self.first_db_client.get().await.unwrap();
+        let second_client = self.second_db_client.get().await.unwrap();
 
         // Prepare the query for fetching data hashes
         let hash_query = TableQuery::HashQuery(
@@ -259,8 +258,8 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
         let hash_query_binding = hash_query.to_string();
 
         // Prepare hash queries for both databases
-        let first_hash = sqlx::query(hash_query_binding.as_str()).fetch_one(&first_pool);
-        let second_hash = sqlx::query(hash_query_binding.as_str()).fetch_one(&second_pool);
+        let first_hash = first_client.query_one(&hash_query_binding, &[]);
+        let second_hash = second_client.query_one(&hash_query_binding, &[]);
 
         // Fetch hashes for both databases
         let hash_fetch_futures = futures::future::join_all(vec![first_hash, second_hash]).await;
@@ -270,15 +269,11 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
         // Map hash results to [String]
         let first_hash = match first_hash {
-            Ok(pg_row) => pg_row
-                .try_get::<String, _>("md5")
-                .unwrap_or("not_available".to_string()),
+            Ok(pg_row) => pg_row.try_get("md5").unwrap_or("not_available".to_string()),
             Err(e) => e.to_string(),
         };
         let second_hash = match second_hash {
-            Ok(pg_row) => pg_row
-                .try_get::<String, _>("md5")
-                .unwrap_or("not_available".to_string()),
+            Ok(pg_row) => pg_row.try_get("md5").unwrap_or("not_available".to_string()),
             Err(e) => e.to_string(),
         };
 

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use colored::Colorize;
 
-use log::{debug, info};
+use tracing::{debug, info};
 
 use crate::diff::diff_output::DiffOutput;
 use crate::diff::sequence::query::input::{QueryAllSequencesInput, QueryLastValuesInput};

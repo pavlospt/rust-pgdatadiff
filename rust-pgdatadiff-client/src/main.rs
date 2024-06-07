@@ -169,7 +169,7 @@ async fn main_inquire() -> Result<()> {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     #[cfg(feature = "with-clap")]
     {

@@ -1,11 +1,11 @@
 use crate::diff::db_clients::DBClients;
 use anyhow::Result;
 use colored::Colorize;
+use deadpool_postgres::tokio_postgres::NoTls;
+use deadpool_postgres::{Config, ManagerConfig, PoolConfig, RecyclingMethod, Runtime};
 
 use crate::diff::diff_output::DiffOutput;
-use log::info;
-use sqlx::postgres::PgPoolOptions;
-use sqlx::Executor;
+use tracing::info;
 
 use crate::diff::diff_payload::DiffPayload;
 use crate::diff::sequence::query::sequence_query_executor::{
@@ -28,35 +28,29 @@ impl Differ {
     pub async fn diff_dbs(diff_payload: DiffPayload) -> Result<Vec<DiffOutput>> {
         info!("{}", "Initiating DB diffing…".bold().blue());
 
-        let first_db_pool = PgPoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    conn.execute("SET application_name = 'rust-pgdatadiff';")
-                        .await?;
-                    Ok(())
-                })
-            })
-            .max_connections(diff_payload.max_connections())
-            .connect(diff_payload.first_db())
-            .await
-            .expect("Failed to connect to first DB");
+        let mut first_cfg = Config::new();
+        first_cfg.url = Some(diff_payload.first_db().to_string());
+        // first_cfg.application_name = Some(String::from("rust-pgdatadiff"));
+        first_cfg.pool = Some(PoolConfig::new(diff_payload.max_connections() as usize));
+        first_cfg.manager = Some(ManagerConfig {
+            recycling_method: RecyclingMethod::Fast,
+        });
+
+        let mut second_cfg = Config::new();
+        second_cfg.url = Some(diff_payload.second_db().to_string());
+        // second_cfg.application_name = Some(String::from("rust-pgdatadiff"));
+        second_cfg.pool = Some(PoolConfig::new(diff_payload.max_connections() as usize));
+        second_cfg.manager = Some(ManagerConfig {
+            recycling_method: RecyclingMethod::Fast,
+        });
 
         info!("{}", "Connected to first DB".magenta().bold());
-
-        let second_db_pool = PgPoolOptions::new()
-            .after_connect(|conn, _meta| {
-                Box::pin(async move {
-                    conn.execute("SET application_name = 'rust-pgdatadiff';")
-                        .await?;
-                    Ok(())
-                })
-            })
-            .max_connections(diff_payload.max_connections())
-            .connect(diff_payload.second_db())
-            .await
-            .expect("Failed to connect to second DB");
+        let first_db_pool = first_cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap();
 
         info!("{}", "Connected to second DB".magenta().bold());
+        let second_db_pool = second_cfg
+            .create_pool(Some(Runtime::Tokio1), NoTls)
+            .unwrap();
 
         let db_clients = DBClients::new(first_db_pool, second_db_pool);
 
