@@ -1,6 +1,6 @@
 [package]
 name = "rust-pgdatadiff"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2021"
 license = "MIT"
 description = "Rust library for comparing two PostgreSQL databases"
@@ -10,30 +10,47 @@ repository = "https://github.com/pavlospt/rust-pgdatadiff"
 keywords = ["postgres", "postgresql", "diff"]
 documentation = "https://docs.rs/rust-pgdatadiff"
 
-[dependencies]
-anyhow = "1.0.83"
-tokio = { version = "1.38.0", features = ["full"] }
-sqlx = { version = "0.7", features = ["runtime-tokio", "tls-native-tls", "postgres"] }
+[workspace]
+members = ["rust-pgdatadiff-client"]
+
+[workspace.dependencies]
+anyhow = "1"
+tokio = { version = "1", features = ["full"] }
 colored = "2.1.0"
-futures = { version = "0.3.30", default-features = true, features = ["async-await"] }
-env_logger = "0.11.3"
-log = "0.4.21"
+futures = { version = "0.3.30", default-features = true, features = [
+    "async-await",
+] }
 async-trait = "0.1.80"
 pretty_assertions = "1.4.0"
+mockall = "0.12.1"
+tracing-subscriber = "0.3.18"
+tracing = "0.1.40"
+cargo-nextest = "0.9.72"
+deadpool-postgres = "0.14.0"
+rust-pgdatadiff = { path = ".", version = "0.1.5" }
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+colored.workspace = true
+futures.workspace = true
+async-trait.workspace = true
+pretty_assertions.workspace = true
+tracing-subscriber.workspace = true
+tracing.workspace = true
+cargo-nextest.workspace = true
+deadpool-postgres.workspace = true
 
 [dependencies.clap]
 version = "4.5.4"
 features = ["derive"]
 
 [dev-dependencies]
-mockall = "0.12.1"
-tokio = { version = "1.38.0", features = ["rt-multi-thread", "macros"] }
+mockall.workspace = true
+tokio.workspace = true
 
 [lib]
 test = true
 edition = "2021"
 crate-type = ["lib"]
 name = "rust_pgdatadiff"
-
-[workspace]
-members = ["rust-pgdatadiff-client"]

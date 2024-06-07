@@ -12,7 +12,7 @@ use crate::diff::table::query::table_types::{
 };
 use anyhow::Result;
 use colored::Colorize;
-use log::{debug, info};
+use tracing::{debug, info};
 
 use crate::diff::diff_output::DiffOutput;
 use crate::diff::types::SchemaName;
@@ -188,10 +188,12 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
             diff_payload.included_tables().to_vec(),
             diff_payload.excluded_tables().to_vec(),
         );
+
         let tables = self
             .single_table_query_executor
             .query_table_names(input)
             .await;
+
         Ok(tables)
     }
 

@@ -1,7 +1,6 @@
 // Path: examples/example_diff.rs
 extern crate anyhow;
 extern crate clap;
-extern crate env_logger;
 extern crate rust_pgdatadiff;
 
 use anyhow::Result;
@@ -58,7 +57,7 @@ enum Commands {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    env_logger::init();
+    tracing_subscriber::fmt::init();
 
     let cli = Cli::parse();
     match &cli.command {

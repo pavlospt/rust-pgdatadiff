@@ -7,7 +7,6 @@
 /// # Examples
 ///
 /// ```no_run
-/// use sqlx::postgres::PgPool;
 /// use rust_pgdatadiff::diff::sequence::query::sequence_query_executor::SequenceSingleSourceQueryExecutorImpl;
 /// use rust_pgdatadiff::diff::sequence::query::sequence_query_executor::SequenceSingleSourceQueryExecutor;
 /// use rust_pgdatadiff::diff::sequence::query::input::QueryAllSequencesInput;
@@ -20,12 +19,15 @@
 /// #[tokio::main]
 /// async fn main() {
 ///
-///     let db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database")
-///         .await
+///     let mut cfg = Config::new();
+///     cfg.url = Some(String::from("postgres://user:password@localhost:5432/database"));
+///
+///     let db_pool: Pool = cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
 ///
 ///     // Create a single data source executor
-///     let single_source_executor = SequenceSingleSourceQueryExecutorImpl::new(db_client);
+///     let single_source_executor = SequenceSingleSourceQueryExecutorImpl::new(db_pool);
 ///
 ///     // Query sequence names
 ///     let schema_name = SchemaName::new("public".to_string());
@@ -34,13 +36,21 @@
 ///         .await;
 ///
 ///     // Create a dual data source executor
-///     let first_db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database1")
-///         .await
+///     let mut first_cfg = Config::new();
+///     first_cfg.url = Some(String::from("postgres://user:password@localhost:5432/database"));
+///
+///     let mut second_cfg = Config::new();
+///     second_cfg.url = Some(String::from("postgres://user:password@localhost:5432/database2"));
+///
+///     let first_db_pool: Pool = first_cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
-///     let second_db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database2")
-///         .await
+///
+///     let second_db_pool: Pool = second_cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
-///     let dual_source_executor = SequenceDualSourceQueryExecutorImpl::new(first_db_client, second_db_client);
+///
+///     let dual_source_executor = SequenceDualSourceQueryExecutorImpl::new(first_db_pool, second_db_pool);
 ///
 ///     // Query sequence last values
 ///     let sequence_name = SequenceName::new("public".to_string());
@@ -55,8 +65,8 @@ use crate::diff::sequence::query::sequence_query::SequenceQuery;
 
 use anyhow::Result;
 use async_trait::async_trait;
-use log::error;
-use sqlx::{Pool, Postgres, Row};
+use deadpool_postgres::Pool;
+use tracing::error;
 
 #[cfg_attr(test, mockall::automock)]
 #[async_trait]
@@ -70,11 +80,11 @@ pub trait SequenceSingleSourceQueryExecutor {
 }
 
 pub struct SequenceSingleSourceQueryExecutorImpl {
-    db_pool: Pool<Postgres>,
+    db_pool: Pool,
 }
 
 impl SequenceSingleSourceQueryExecutorImpl {
-    pub fn new(db_pool: Pool<Postgres>) -> Self {
+    pub fn new(db_pool: Pool) -> Self {
         Self { db_pool }
     }
 }
@@ -82,19 +92,20 @@ impl SequenceSingleSourceQueryExecutorImpl {
 #[async_trait]
 impl SequenceSingleSourceQueryExecutor for SequenceSingleSourceQueryExecutorImpl {
     async fn query_sequence_names(&self, input: QueryAllSequencesInput) -> Vec<String> {
-        let pool = &self.db_pool;
+        // Clone the database client
+        let client = self.db_pool.get().await.unwrap();
 
         let schema_name = input.schema_name();
         let sequence_query = SequenceQuery::AllSequences(schema_name);
 
         let query_binding = sequence_query.to_string();
 
-        sqlx::query(query_binding.as_str())
-            .fetch_all(pool)
+        client
+            .query(&query_binding, &[])
             .await
             .unwrap()
             .into_iter()
-            .map(|row| row.try_get("sequence_name").unwrap())
+            .map(|row| row.get("sequence_name"))
             .collect::<Vec<String>>()
     }
 }
@@ -118,12 +129,12 @@ pub trait SequenceDualSourceQueryExecutor {
 }
 
 pub struct SequenceDualSourceQueryExecutorImpl {
-    first_db_pool: Pool<Postgres>,
-    second_db_pool: Pool<Postgres>,
+    first_db_pool: Pool,
+    second_db_pool: Pool,
 }
 
 impl SequenceDualSourceQueryExecutorImpl {
-    pub fn new(first_db_pool: Pool<Postgres>, second_db_pool: Pool<Postgres>) -> Self {
+    pub fn new(first_db_pool: Pool, second_db_pool: Pool) -> Self {
         Self {
             first_db_pool,
             second_db_pool,
@@ -137,8 +148,9 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
         &self,
         input: QueryLastValuesInput,
     ) -> (Result<i64>, Result<i64>) {
-        let first_pool = &self.first_db_pool;
-        let second_pool = &self.second_db_pool;
+        // Clone the database clients
+        let first_client = self.first_db_pool.get().await.unwrap();
+        let second_client = self.second_db_pool.get().await.unwrap();
 
         let sequence_query = SequenceQuery::LastValue(
             input.schema_name().to_owned(),
@@ -147,15 +159,14 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
 
         let query_binding = sequence_query.to_string();
 
-        let first_result = sqlx::query(query_binding.as_str()).fetch_one(first_pool);
-
-        let second_result = sqlx::query(query_binding.as_str()).fetch_one(second_pool);
+        let first_result = first_client.query_one(&query_binding, &[]);
+        let second_result = second_client.query_one(&query_binding, &[]);
 
         let (first_result, second_result) =
             futures::future::join(first_result, second_result).await;
 
         let first_count: Result<i64> = match first_result {
-            Ok(pg_row) => Ok(pg_row.try_get::<i64, _>("last_value").unwrap()),
+            Ok(pg_row) => Ok(pg_row.try_get("last_value").unwrap()),
             Err(e) => {
                 error!("Error while fetching first sequence: {}", e);
                 Err(anyhow::anyhow!("Failed to fetch count for first sequence"))
@@ -163,7 +174,7 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
         };
 
         let second_count: Result<i64> = match second_result {
-            Ok(pg_row) => Ok(pg_row.try_get::<i64, _>("last_value").unwrap()),
+            Ok(pg_row) => Ok(pg_row.try_get("last_value").unwrap()),
             Err(e) => {
                 error!("Error while fetching second sequence: {}", e);
                 Err(anyhow::anyhow!("Failed to fetch count for second sequence"))
