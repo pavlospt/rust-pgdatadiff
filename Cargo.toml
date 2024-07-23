@@ -20,9 +20,9 @@ colored = "2.1.0"
 futures = { version = "0.3.30", default-features = true, features = [
     "async-await",
 ] }
-async-trait = "0.1.81"
-pretty_assertions = "1.4.0"
-mockall = "0.12.1"
+async-trait = "0.1"
+pretty_assertions = "1.4"
+mockall = "0.12"
 tracing-subscriber = "0.3.18"
 tracing = "0.1.40"
 cargo-nextest = "0.9.72"
