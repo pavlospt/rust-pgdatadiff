@@ -46,7 +46,7 @@ postgres-native-tls.workspace = true
 native-tls.workspace = true
 
 [dependencies.clap]
-version = "4.5.9"
+version = "4.5.11"
 features = ["derive"]
 
 [dev-dependencies]
