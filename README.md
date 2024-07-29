@@ -155,3 +155,6 @@ export RUST_LOG=rust_pgdatadiff=info,sqlx=debug
 
 * [Pavlos-Petros Tournaris](https://github.com/pavlospt)
 * [Nikolaos Nikitas](https://github.com/nikoshet)
+
+If you like my work, consider buying me a coffee 😄 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/pavlospt)
