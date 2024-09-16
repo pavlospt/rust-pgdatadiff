@@ -2,7 +2,9 @@ use crate::diff::diff_payload::DiffPayload;
 use crate::diff::table::query::input::{
     QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput,
 };
-use crate::diff::table::query::output::{TableCountDiff, TableDiffOutput, TableSource};
+use crate::diff::table::query::output::{
+    IdenticalTablesCounter, TableCountDiff, TableDiffOutput, TableSource,
+};
 
 use crate::diff::table::query::table_query_executor::{
     TableDualSourceQueryExecutor, TableSingleSourceQueryExecutor,
@@ -16,6 +18,7 @@ use tracing::{debug, info};
 
 use crate::diff::diff_output::DiffOutput;
 use crate::diff::types::SchemaName;
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 pub struct TableDiffer<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor> {
@@ -41,6 +44,8 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
         tables.sort_by_key(|s| s.to_lowercase());
 
         let sorted_tables = tables.to_owned();
+
+        let identical_tables_counter = Arc::new(Mutex::new(IdenticalTablesCounter::new(0)));
 
         let futures = sorted_tables.iter().map(|table_name| async {
             let start = Instant::now();
@@ -81,6 +86,14 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
             );
 
             debug!("##############################################");
+
+            // Increment identical tables counter
+            let identical_tables_counter = identical_tables_counter.clone();
+            self.increase_counter_of_identical_tables(
+                identical_tables_counter,
+                table_diff_result.clone(),
+            )
+            .await;
 
             // If we only care about counts, return the result
             if diff_payload.only_count() {
@@ -167,6 +180,20 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 .bold()
         );
 
+        let identical_tables_counter = identical_tables_counter.lock().unwrap();
+        let rate = (identical_tables_counter.count as f64 / tables.len() as f64) * 100.0;
+        info!(
+            "{}",
+            format!(
+                "Identical tables found: {} out of {}, rate: {}%",
+                identical_tables_counter.count,
+                tables.len(),
+                rate
+            )
+            .bright_blue()
+            .bold()
+        );
+
         info!("##############################################");
         info!("{}", "Table analysis results 👇".bright_magenta().bold());
 
@@ -195,6 +222,23 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
             .await;
 
         Ok(tables)
+    }
+
+    pub async fn increase_counter_of_identical_tables(
+        &self,
+        identical_tables_counter: Arc<Mutex<IdenticalTablesCounter>>,
+        table_diff_result: TableDiffOutput,
+    ) {
+        // Increment identical tables counter for specific cases
+        let vec: Vec<String> = vec![
+            "NoCountDiff".into(),
+            "NoDiffWithDuration".into(),
+            "NoPrimaryKeyFound".into(), // this is added since we can't compare tables without primary keys
+        ];
+        if vec.contains(&table_diff_result.enum_as_string()) {
+            let mut counter = identical_tables_counter.lock().unwrap();
+            counter.increment();
+        }
     }
 
     fn extract_result(

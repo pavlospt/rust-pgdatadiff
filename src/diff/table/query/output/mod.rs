@@ -22,6 +22,22 @@ impl Display for TableSource {
     }
 }
 
+// Represents a counter for the identical tables in total
+#[derive(Debug, Clone)]
+pub struct IdenticalTablesCounter {
+    pub count: i64,
+}
+
+impl IdenticalTablesCounter {
+    pub fn new(count: i64) -> Self {
+        Self { count }
+    }
+
+    pub fn increment(&mut self) {
+        self.count += 1;
+    }
+}
+
 /// Represents the difference in table counts between two tables.
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Debug, Clone)]
@@ -64,6 +80,22 @@ impl TableDiffOutput {
     /// Determines whether the table difference should be skipped.
     pub fn skip_table_diff(&self) -> bool {
         matches!(self, Self::Diff(_, _) | Self::NotExists(_, _))
+    }
+
+    // Prints the enum value of the table diff output as string
+    pub fn enum_as_string(&self) -> String {
+        match self {
+            Self::NoCountDiff(_table, _count) => "NoCountDiff".to_string(),
+            Self::NotExists(_table, _source) => "NotExists".to_string(),
+            Self::Diff(_table, _diffs) => "Diff".to_string(),
+            TableDiffOutput::NoPrimaryKeyFound(_table) => "NoPrimaryKeyFound".to_string(),
+            TableDiffOutput::NoDiffWithDuration(_table, _duration) => {
+                "NoDiffWithDuration".to_string()
+            }
+            TableDiffOutput::DataDiffWithDuration(_table_name, _position, _offset, _duration) => {
+                "DataDiffWithDuration".to_string()
+            }
+        }
     }
 
     /// Converts the table difference output to a colored string.

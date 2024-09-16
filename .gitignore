@@ -15,3 +15,5 @@ target/
 .DS_Store
 postgres-data1/
 postgres-data2/
+
+script.sh
