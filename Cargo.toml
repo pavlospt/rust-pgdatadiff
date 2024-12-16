@@ -16,7 +16,7 @@ members = ["rust-pgdatadiff-client"]
 [workspace.dependencies]
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
-colored = "2.1.0"
+colored = "2.2.0"
 futures = { version = "0.3.31", default-features = true, features = [
     "async-await",
 ] }
