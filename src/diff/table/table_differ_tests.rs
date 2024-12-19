@@ -23,21 +23,21 @@ mod tests {
         let table_differ =
             TableDiffer::new(single_source_query_executor, dual_source_query_executor);
 
-        let diff_payload = DiffPayload::new(
-            "first_db",
-            "second_db",
-            false,
-            false,
-            false,
-            10000,
-            0,
-            10,
-            vec!["table1", "table2"],
-            EMPTY_STRING_VEC,
-            "schema_name",
-            false,
-            false,
-        );
+        let diff_payload = DiffPayload::builder()
+            .first_db("first_db")
+            .second_db("second_db")
+            .only_tables(false)
+            .only_sequences(false)
+            .only_count(false)
+            .chunk_size(10000)
+            .start_position(0)
+            .max_connections(10)
+            .include_tables(vec!["table1", "table2"])
+            .exclude_tables(EMPTY_STRING_VEC)
+            .schema_name("schema_name")
+            .accept_invalid_certs_first_db(false)
+            .accept_invalid_certs_second_db(false)
+            .build();
 
         let tables = table_differ.get_all_tables(&diff_payload).await.unwrap();
 
@@ -70,21 +70,21 @@ mod tests {
         let table_differ =
             TableDiffer::new(single_source_query_executor, dual_source_query_executor);
 
-        let diff_payload = DiffPayload::new(
-            "first_db",
-            "second_db",
-            false,
-            false,
-            false,
-            10000,
-            0,
-            10,
-            vec!["table1", "table2"],
-            EMPTY_STRING_VEC,
-            "schema_name",
-            false,
-            false,
-        );
+        let diff_payload = DiffPayload::builder()
+            .first_db("first_db")
+            .second_db("second_db")
+            .only_tables(false)
+            .only_sequences(false)
+            .only_count(false)
+            .chunk_size(10000)
+            .start_position(0)
+            .max_connections(10)
+            .include_tables(vec!["table1", "table2"])
+            .exclude_tables(EMPTY_STRING_VEC)
+            .schema_name("schema_name")
+            .accept_invalid_certs_first_db(false)
+            .accept_invalid_certs_second_db(false)
+            .build();
 
         let diff_output = table_differ
             .diff_all_table_data(&diff_payload)
@@ -137,21 +137,21 @@ mod tests {
         let table_differ =
             TableDiffer::new(single_source_query_executor, dual_source_query_executor);
 
-        let diff_payload = DiffPayload::new(
-            "first_db",
-            "second_db",
-            false,
-            false,
-            false,
-            10000,
-            0,
-            10,
-            vec!["table1", "table2"],
-            EMPTY_STRING_VEC,
-            "schema_name",
-            false,
-            false,
-        );
+        let diff_payload = DiffPayload::builder()
+            .first_db("first_db")
+            .second_db("second_db")
+            .only_tables(false)
+            .only_sequences(false)
+            .only_count(false)
+            .chunk_size(10000)
+            .start_position(0)
+            .max_connections(10)
+            .include_tables(vec!["table1", "table2"])
+            .exclude_tables(EMPTY_STRING_VEC)
+            .schema_name("schema_name")
+            .accept_invalid_certs_first_db(false)
+            .accept_invalid_certs_second_db(false)
+            .build();
 
         let diff_output = table_differ
             .diff_all_table_data(&diff_payload)

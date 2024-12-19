@@ -86,21 +86,21 @@ async fn main_clap() -> Result<()> {
             accept_invalid_certs_first_db,
             accept_invalid_certs_second_db,
         } => {
-            let payload = DiffPayload::new(
-                first_db.clone(),
-                second_db.clone(),
-                *only_tables,
-                *only_sequences,
-                *only_count,
-                *chunk_size,
-                *start_position,
-                *max_connections,
-                include_tables.to_vec(),
-                exclude_tables.to_vec(),
-                schema_name.clone(),
-                *accept_invalid_certs_first_db,
-                *accept_invalid_certs_second_db,
-            );
+            let payload = DiffPayload::builder()
+                .first_db(first_db.clone())
+                .second_db(second_db.clone())
+                .only_tables(*only_tables)
+                .only_sequences(*only_sequences)
+                .only_count(*only_count)
+                .chunk_size(*chunk_size)
+                .start_position(*start_position)
+                .max_connections(*max_connections)
+                .include_tables(include_tables.to_vec())
+                .exclude_tables(exclude_tables.to_vec())
+                .schema_name(schema_name.clone())
+                .accept_invalid_certs_first_db(*accept_invalid_certs_first_db)
+                .accept_invalid_certs_second_db(*accept_invalid_certs_second_db)
+                .build();
             let _ = Differ::diff_dbs(payload).await;
             Ok(())
         }
@@ -162,27 +162,32 @@ async fn main_inquire() -> Result<()> {
             .with_default(false)
             .prompt()?;
 
-    let payload = DiffPayload::new(
-        first_db,
-        second_db,
-        only_tables,
-        only_sequences,
-        only_count,
-        chunk_size.parse::<i64>().unwrap(),
-        start_position.parse::<i64>().unwrap(),
-        max_connections.parse::<i64>().unwrap(),
-        include_tables
-            .split_whitespace()
-            .flat_map(|t| t.split(','))
-            .collect(),
-        exclude_tables
-            .split_whitespace()
-            .flat_map(|t| t.split(','))
-            .collect(),
-        schema_name,
-        accept_invalid_certs_first_db,
-        accept_invalid_certs_second_db,
-    );
+    let payload = DiffPayload::builder()
+        .first_db(first_db)
+        .second_db(second_db)
+        .only_tables(only_tables)
+        .only_sequences(only_sequences)
+        .only_count(only_count)
+        .chunk_size(chunk_size.parse::<i64>().unwrap())
+        .start_position(start_position.parse::<i64>().unwrap())
+        .max_connections(max_connections.parse::<i64>().unwrap())
+        .include_tables(
+            include_tables
+                .split_whitespace()
+                .flat_map(|t| t.split(','))
+                .collect(),
+        )
+        .exclude_tables(
+            exclude_tables
+                .split_whitespace()
+                .flat_map(|t| t.split(','))
+                .collect(),
+        )
+        .schema_name(schema_name)
+        .accept_invalid_certs_first_db(accept_invalid_certs_first_db)
+        .accept_invalid_certs_second_db(accept_invalid_certs_second_db)
+        .build();
+
     let _ = Differ::diff_dbs(payload).await;
     Ok(())
 }

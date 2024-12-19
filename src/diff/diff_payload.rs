@@ -1,3 +1,5 @@
+use bon::bon;
+
 /// Represents a payload for performing database diffs.
 pub struct DiffPayload {
     first_db: String,
@@ -15,6 +17,7 @@ pub struct DiffPayload {
     accept_invalid_certs_second_db: bool,
 }
 
+#[bon]
 impl DiffPayload {
     /// Creates a new `DiffPayload` instance.
     ///
@@ -35,7 +38,7 @@ impl DiffPayload {
     /// # Returns
     ///
     /// A new `DiffPayload` instance.
-    #[allow(clippy::too_many_arguments)]
+    #[builder]
     pub fn new(
         first_db: impl Into<String>,
         second_db: impl Into<String>,
@@ -126,20 +129,20 @@ mod tests {
     #[test]
     #[should_panic = "Cannot include and exclude tables at the same time"]
     fn test_new_diff_payload() {
-        _ = DiffPayload::new(
-            "first_db",
-            "second_db",
-            false,
-            false,
-            false,
-            10000,
-            0,
-            10,
-            vec!["table1"],
-            vec!["table2"],
-            "schema_name",
-            false,
-            false,
-        );
+        _ = DiffPayload::builder()
+            .first_db("first_db")
+            .second_db("second_db")
+            .only_tables(false)
+            .only_sequences(false)
+            .only_count(false)
+            .chunk_size(10000)
+            .start_position(0)
+            .max_connections(10)
+            .include_tables(vec!["table1"])
+            .exclude_tables(vec!["table2"])
+            .schema_name("schema_name")
+            .accept_invalid_certs_first_db(false)
+            .accept_invalid_certs_second_db(false)
+            .build();
     }
 }
