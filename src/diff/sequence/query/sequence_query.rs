@@ -56,7 +56,7 @@ mod tests {
 
         assert_eq!(
             last_value_query.to_string(),
-            "SELECT last_value FROM test_schema.test_sequence;"
+            "SELECT last_value FROM test_schema.\"test_sequence\";"
         );
     }
 
