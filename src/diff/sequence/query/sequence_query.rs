@@ -17,7 +17,7 @@ impl Display for SequenceQuery {
             Self::LastValue(schema_name, sequence_name) => {
                 write!(
                     f,
-                    "SELECT last_value FROM {}.{};",
+                    "SELECT last_value FROM {}.\"{}\";",
                     schema_name.name(),
                     sequence_name.name()
                 )

@@ -1,6 +1,6 @@
 services:
   postgres1:
-    image: public.ecr.aws/docker/library/postgres:16.2
+    image: public.ecr.aws/docker/library/postgres:17.2
     restart: always
     environment:
       - POSTGRES_USER=postgres
@@ -11,16 +11,18 @@ services:
         max-size: 10m
         max-file: "3"
     ports:
-      - '5438:5432'
+      - "5438:5432"
     volumes:
       - ./postgres-data1:/var/lib/postgresql/data
       # copy the sql script to create tables
       - ./db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      # copy the sql script to create sequences
+      - ./db/create_sequences.sql:/docker-entrypoint-initdb.d/create_sequences.sql
       # copy the sql script to fill tables
       - ./db/fill_tables.sql:/docker-entrypoint-initdb.d/fill_tables.sql
 
   postgres2:
-    image: public.ecr.aws/docker/library/postgres:16.2
+    image: public.ecr.aws/docker/library/postgres:17.2
     restart: always
     environment:
       - POSTGRES_USER=postgres
@@ -31,10 +33,12 @@ services:
         max-size: 10m
         max-file: "3"
     ports:
-      - '5439:5432'
+      - "5439:5432"
     volumes:
       - ./postgres-data2:/var/lib/postgresql/data
       # copy the sql script to create tables
       - ./db/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+      # copy the sql script to create sequences
+      - ./db/create_sequences.sql:/docker-entrypoint-initdb.d/create_sequences.sql
       # copy the sql script to fill tables
       - ./db/fill_tables.sql:/docker-entrypoint-initdb.d/fill_tables.sql
