@@ -28,7 +28,7 @@ tracing = "0.1.41"
 cargo-nextest = "0.9.88"
 deadpool-postgres = "0.14.1"
 postgres-native-tls = "0.5.1"
-native-tls = "0.2.12"
+native-tls = "0.2.13"
 bon = "3.3"
 rust-pgdatadiff = { path = ".", version = "0.1.7" }
 
