@@ -29,7 +29,7 @@ cargo-nextest = "0.9.92"
 deadpool-postgres = "0.14.1"
 postgres-native-tls = "0.5.1"
 native-tls = "0.2.14"
-bon = "3.3"
+bon = "3.4"
 rust-pgdatadiff = { path = ".", version = "0.1.7" }
 
 [dependencies]
