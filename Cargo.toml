@@ -48,7 +48,7 @@ native-tls.workspace = true
 bon.workspace = true
 
 [dependencies.clap]
-version = "4.5.35"
+version = "4.5.36"
 features = ["derive"]
 
 [dev-dependencies]
