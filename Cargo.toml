@@ -1,8 +1,8 @@
 [package]
 name = "rust-pgdatadiff"
 version = "0.1.8"
-edition = "2021"
 license = "MIT"
+edition = "2024"
 description = "Rust library for comparing two PostgreSQL databases"
 readme = "README.md"
 homepage = "https://github.com/pavlospt/rust-pgdatadiff"
@@ -57,6 +57,5 @@ tokio.workspace = true
 
 [lib]
 test = true
-edition = "2021"
 crate-type = ["lib"]
 name = "rust_pgdatadiff"
