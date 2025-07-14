@@ -70,11 +70,11 @@ impl TableDiffOutput {
     pub fn to_string(&self) -> ColoredString {
         match self {
             Self::NoCountDiff(table, count) => {
-                format!("{} - No difference. Total rows: {}", table, count)
+                format!("{table} - No difference. Total rows: {count}")
                     .green()
                     .bold()
             }
-            Self::NotExists(table, source) => format!("{} - Does not exist in {}", table, source)
+            Self::NotExists(table, source) => format!("{table} - Does not exist in {source}")
                 .red()
                 .bold()
                 .underline(),
@@ -87,7 +87,7 @@ impl TableDiffOutput {
             .red()
             .bold(),
             TableDiffOutput::NoPrimaryKeyFound(table) => {
-                format!("{} - No primary key found", table).red().bold()
+                format!("{table} - No primary key found").red().bold()
             }
             TableDiffOutput::NoDiffWithDuration(table, duration) => {
                 format!("{} - No difference in {}ms", table, duration.as_millis())

@@ -93,11 +93,11 @@ impl IncludedExcludedTables {
         let joined_tables = self
             .excluded_tables
             .iter()
-            .map(|table| format!("'{}'", table))
+            .map(|table| format!("'{table}'"))
             .collect::<Vec<String>>()
             .join(",");
 
-        format!("AND table_name NOT IN ({})", joined_tables)
+        format!("AND table_name NOT IN ({joined_tables})")
     }
 
     pub fn inclusion_statement(&self) -> String {
@@ -108,11 +108,11 @@ impl IncludedExcludedTables {
         let joined_tables = self
             .included_tables
             .iter()
-            .map(|table| format!("'{}'", table))
+            .map(|table| format!("'{table}'"))
             .collect::<Vec<String>>()
             .join(",");
 
-        format!("AND table_name IN ({})", joined_tables)
+        format!("AND table_name IN ({joined_tables})")
     }
 
     fn has_included_tables(&self) -> bool {

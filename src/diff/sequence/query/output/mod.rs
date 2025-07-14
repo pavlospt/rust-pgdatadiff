@@ -55,9 +55,9 @@ impl SequenceDiffOutput {
     /// Converts the `SequenceDiffOutput` to a colored string representation.
     pub fn to_string(&self) -> ColoredString {
         match self {
-            Self::NoDiff(sequence) => format!("{} - No difference\n", sequence).green().bold(),
+            Self::NoDiff(sequence) => format!("{sequence} - No difference\n").green().bold(),
             Self::NotExists(sequence, source) => {
-                format!("{} - Does not exist in {}\n", sequence, source)
+                format!("{sequence} - Does not exist in {source}\n")
                     .red()
                     .bold()
                     .underline()
