@@ -92,7 +92,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 return table_diff_result;
             }
 
-            let query_primary_keys_input = QueryPrimaryKeysInput::new(table_name.clone());
+            let query_primary_keys_input = QueryPrimaryKeysInput::new(diff_payload.schema_name().to_string(), table_name.clone());
 
             let primary_keys = self
                 .single_table_query_executor

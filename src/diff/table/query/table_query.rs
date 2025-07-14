@@ -7,7 +7,7 @@ use std::fmt::Display;
 pub enum TableQuery {
     AllTablesForSchema(SchemaName, IncludedExcludedTables),
     CountRowsForTable(SchemaName, TableName),
-    FindPrimaryKeyForTable(TableName),
+    FindPrimaryKeyForTable(SchemaName, TableName),
     HashQuery(
         SchemaName,
         TableName,
@@ -45,12 +45,12 @@ impl Display for TableQuery {
             TableQuery::CountRowsForTable(schema_name, table_name) => {
                 write!(
                     f,
-                    "SELECT count(*) FROM {}.{}",
+                    "SELECT count(*) FROM \"{}\".\"{}\"",
                     schema_name.name(),
                     table_name.name()
                 )
             }
-            TableQuery::FindPrimaryKeyForTable(table_name) => write!(
+            TableQuery::FindPrimaryKeyForTable(schema_name, table_name) => write!(
                 f,
                 // language=postgresql
                 r#"
@@ -58,8 +58,9 @@ impl Display for TableQuery {
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = '{}'::regclass
+                WHERE  i.indrelid = '"{}"."{}"'::regclass
                 AND    i.indisprimary"#,
+                schema_name.name(),
                 table_name.name()
             ),
             TableQuery::HashQuery(
@@ -134,20 +135,21 @@ mod tests {
         let schema_name = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
         let query = TableQuery::CountRowsForTable(schema_name, table_name);
-        let expected = "SELECT count(*) FROM public.table1";
+        let expected = "SELECT count(*) FROM \"public\".\"table1\"";
         assert_eq!(expected, query.to_string());
     }
 
     #[test]
     fn test_display_find_primary_key_for_table() {
+        let schema_name = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
-        let query = TableQuery::FindPrimaryKeyForTable(table_name);
+        let query = TableQuery::FindPrimaryKeyForTable(schema_name, table_name);
         let expected = r#"
                 SELECT a.attname
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = 'table1'::regclass
+                WHERE  i.indrelid = '"public"."table1"'::regclass
                 AND    i.indisprimary"#;
         assert_eq!(expected, query.to_string());
     }
@@ -170,7 +172,7 @@ mod tests {
                     SELECT md5(array_agg(md5((t.*)::varchar))::varchar)
                     FROM (
                         SELECT *
-                        FROM public.table1
+                        FROM "public"."table1"
                         ORDER BY id limit 100 offset 0
                     ) AS t
                     "#;
