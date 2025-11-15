@@ -7,7 +7,7 @@ use std::fmt::Display;
 pub enum TableQuery {
     AllTablesForSchema(SchemaName, IncludedExcludedTables),
     CountRowsForTable(SchemaName, TableName),
-    FindPrimaryKeyForTable(TableName),
+    FindPrimaryKeyForTable(SchemaName, TableName),
     HashQuery(
         SchemaName,
         TableName,
@@ -50,7 +50,7 @@ impl Display for TableQuery {
                     table_name.name()
                 )
             }
-            TableQuery::FindPrimaryKeyForTable(table_name) => write!(
+            TableQuery::FindPrimaryKeyForTable(schema_name, table_name) => write!(
                 f,
                 // language=postgresql
                 r#"
@@ -58,9 +58,10 @@ impl Display for TableQuery {
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = '"{}"'::regclass
+                WHERE  i.indrelid = '"{}"."{}"'::regclass
                 AND    i.indisprimary"#,
-                table_name.name()  // TODO: Missing schema in the above, should be "{}"."{}"
+                schema_name.name(),
+                table_name.name()
             ),
             TableQuery::HashQuery(
                 schema_name,
@@ -140,8 +141,9 @@ mod tests {
 
     #[test]
     fn test_display_find_primary_key_for_table() {
+        let table_schema = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
-        let query = TableQuery::FindPrimaryKeyForTable(table_name);
+        let query = TableQuery::FindPrimaryKeyForTable(table_schema, table_name);
         let expected = r#"
                 SELECT a.attname
                 FROM   pg_index i

@@ -109,12 +109,17 @@ impl QueryHashDataInput {
 
 /// Represents the input for querying primary keys.
 pub struct QueryPrimaryKeysInput {
+    table_schema: String,
     table_name: String,
 }
 
 impl QueryPrimaryKeysInput {
-    pub fn new(table_name: String) -> Self {
-        Self { table_name }
+    pub fn new(table_schema: String, table_name: String) -> Self {
+        Self { table_schema, table_name }
+    }
+
+    pub fn table_schema(&self) -> String {
+        self.table_schema.to_string()
     }
 
     pub fn table_name(&self) -> String {
