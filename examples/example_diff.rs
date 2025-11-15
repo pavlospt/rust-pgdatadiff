@@ -58,6 +58,10 @@ enum Commands {
         /// Accept invalid TLS certificates for the second database
         #[arg(long, default_value_t = false, required = false)]
         accept_invalid_certs_second_db: bool,
+        /// If a table does not have a primary key, use all columns for total ordering during
+        /// hashing
+        #[arg(long, required = false)]
+        replica_identity: String,
     },
 }
 
@@ -85,6 +89,7 @@ async fn main() -> Result<()> {
             schema_name,
             accept_invalid_certs_first_db,
             accept_invalid_certs_second_db,
+            replica_identity,
         } => {
             let payload = DiffPayload::builder()
                 .first_db(first_db.clone())
@@ -100,6 +105,7 @@ async fn main() -> Result<()> {
                 .schema_name(schema_name.clone())
                 .accept_invalid_certs_first_db(*accept_invalid_certs_first_db)
                 .accept_invalid_certs_second_db(*accept_invalid_certs_second_db)
+                .replica_identity(replica_identity.clone())
                 .build();
             let _ = Differ::diff_dbs(payload).await;
             Ok(())

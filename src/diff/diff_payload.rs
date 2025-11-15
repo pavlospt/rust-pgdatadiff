@@ -15,6 +15,7 @@ pub struct DiffPayload {
     schema_name: String,
     accept_invalid_certs_first_db: bool,
     accept_invalid_certs_second_db: bool,
+    replica_identity: String,
 }
 
 #[bon]
@@ -53,6 +54,7 @@ impl DiffPayload {
         schema_name: impl Into<String>,
         accept_invalid_certs_first_db: bool,
         accept_invalid_certs_second_db: bool,
+        replica_identity: String,
     ) -> Self {
         let has_included_tables = !include_tables.is_empty();
         let has_excluded_tables = !exclude_tables.is_empty();
@@ -75,6 +77,7 @@ impl DiffPayload {
             schema_name: schema_name.into(),
             accept_invalid_certs_first_db,
             accept_invalid_certs_second_db,
+            replica_identity,
         }
     }
 
@@ -119,6 +122,9 @@ impl DiffPayload {
     }
     pub fn any_accept_invalid_certs(&self) -> bool {
         self.accept_invalid_certs_first_db || self.accept_invalid_certs_second_db
+    }
+    pub fn replica_identity(&self) -> &str {
+        &self.replica_identity
     }
 }
 

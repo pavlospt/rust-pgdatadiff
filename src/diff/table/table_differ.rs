@@ -92,6 +92,13 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 return table_diff_result;
             }
 
+            let query_table_columns_input = QueryTableColumnsInput::new(diff_payload.schema_name().to_string(), table_name.clone());
+
+            let columns = self
+                .single_table_query_executor
+                .query_table_columns(query_table_columns_input)
+                .await;
+
             let query_primary_keys_input = QueryPrimaryKeysInput::new(diff_payload.schema_name().to_string(), table_name.clone());
 
             let primary_keys = self
@@ -99,18 +106,17 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 .query_primary_keys(query_primary_keys_input)
                 .await;
 
+            let primary_keys = if primary_keys.is_empty() && diff_payload.replica_identity() == "full" {
+                columns.clone()
+            } else {
+                primary_keys
+            };
+
             // If no primary keys found, return the result
             if primary_keys.is_empty() {
                 let table_diff_result = TableDiffOutput::NoPrimaryKeyFound(table_name.clone());
                 return table_diff_result;
             }
-
-            let query_table_columns_input = QueryTableColumnsInput::new(diff_payload.schema_name().to_string(), table_name.clone());
-
-            let columns = self
-                .single_table_query_executor
-                .query_table_columns(query_table_columns_input)
-                .await;
 
             let total_rows = match table_diff_result {
                 TableDiffOutput::NoCountDiff(_, rows) => rows,
