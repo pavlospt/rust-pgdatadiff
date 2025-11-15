@@ -45,7 +45,7 @@ impl Display for TableQuery {
             TableQuery::CountRowsForTable(schema_name, table_name) => {
                 write!(
                     f,
-                    "SELECT count(*) FROM {}.{}",
+                    "SELECT count(*) FROM {}.\"{}\"",
                     schema_name.name(),
                     table_name.name()
                 )
@@ -58,9 +58,9 @@ impl Display for TableQuery {
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = '{}'::regclass
+                WHERE  i.indrelid = '"{}"'::regclass
                 AND    i.indisprimary"#,
-                table_name.name()
+                table_name.name()  // TODO: Missing schema in the above, should be "{}"."{}"
             ),
             TableQuery::HashQuery(
                 schema_name,
@@ -75,8 +75,8 @@ impl Display for TableQuery {
                     SELECT md5(array_agg(md5((t.*)::varchar))::varchar)
                     FROM (
                         SELECT *
-                        FROM {}.{}
-                        ORDER BY {} limit {} offset {}
+                        FROM "{}"."{}"
+                        ORDER BY "{}" limit {} offset {}
                     ) AS t
                     "#,
                     schema_name.name(),
