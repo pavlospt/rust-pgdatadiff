@@ -129,6 +129,11 @@ mod tests {
             .times(1)
             .returning(|_| vec!["id".to_string()]);
 
+        single_source_query_executor
+            .expect_query_table_columns()
+            .times(1)
+            .returning(|_| vec!["id".to_string()]);
+
         dual_source_query_executor
             .expect_query_hash_data()
             .times(1)

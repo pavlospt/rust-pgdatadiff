@@ -25,6 +25,24 @@ impl TablePrimaryKeys {
 }
 
 #[derive(Clone)]
+pub struct TableColumns(Vec<String>);
+
+impl TableColumns {
+    pub fn new(keys: impl Into<Vec<String>>) -> Self {
+        Self(keys.into())
+    }
+
+    pub fn render(&self, table_binding: &str) -> String {
+        self.0
+            .iter()
+            .map(|col| format!("\"{table_binding}\".\"{}\"", col))
+            .collect::<Vec<_>>()
+            .join(", ")
+    }
+}
+
+
+#[derive(Clone)]
 pub struct TablePosition(i64);
 
 impl TablePosition {

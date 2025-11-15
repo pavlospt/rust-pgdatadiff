@@ -69,7 +69,7 @@ use async_trait::async_trait;
 use deadpool_postgres::Pool;
 
 use crate::diff::table::query::input::{
-    QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput,
+    QueryHashDataInput, QueryPrimaryKeysInput, QueryTableColumnsInput, QueryTableCountInput, QueryTableNamesInput
 };
 use crate::diff::table::query::table_query::TableQuery;
 use crate::diff::table::query::table_types::{IncludedExcludedTables, TableName};
@@ -103,6 +103,8 @@ pub trait TableSingleSourceQueryExecutor {
     ///
     /// A vector of primary key column names.
     async fn query_primary_keys(&self, input: QueryPrimaryKeysInput) -> Vec<String>;
+
+    async fn query_table_columns(&self, input: QueryTableColumnsInput) -> Vec<String>;
 }
 
 pub struct TableSingleSourceQueryExecutorImpl {
@@ -158,6 +160,27 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
         query_result
             .iter()
             .map(|row| row.get("attname"))
+            .collect::<Vec<String>>()
+    }
+
+    async fn query_table_columns(&self, input: QueryTableColumnsInput) -> Vec<String> {
+        // Acquire the database client
+        let client = self.db_pool.get().await.unwrap();
+
+        // Prepare the query for primary keys fetching
+        let find_columns_query =
+            TableQuery::FindColumnsForTable(SchemaName::new(input.table_schema()), TableName::new(input.table_name()));
+
+        // Fetch primary keys for the table
+        let query_result = client
+            .query(&find_columns_query.to_string(), &[])
+            .await
+            .unwrap();
+
+        // Map query results to [Vec<String>]
+        query_result
+            .iter()
+            .map(|row| row.get("column_name"))
             .collect::<Vec<String>>()
     }
 }
@@ -252,6 +275,7 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
             input.schema_name(),
             input.table_name(),
             input.primary_keys(),
+            input.table_columns(),
             input.position(),
             input.offset(),
         );
