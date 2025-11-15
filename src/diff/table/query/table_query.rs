@@ -93,13 +93,13 @@ impl Display for TableQuery {
                     FROM (
                         SELECT *
                         FROM "{}"."{}"
-                        ORDER BY "{}" limit {} offset {}
+                        ORDER BY {} limit {} offset {}
                     ) AS t
                     "#,
-                    table_columns.render(table_name.name()),
+                    table_columns.render("t"),
                     schema_name.name(),
                     table_name.name(),
-                    table_primary_keys.keys(),
+                    table_primary_keys.render(table_name.name()),
                     table_offset.offset(),
                     table_position.position(),
                 )
@@ -175,7 +175,7 @@ mod tests {
     fn test_display_hash_query() {
         let schema_name = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
-        let table_primary_keys = TablePrimaryKeys::new("id".to_string());
+        let table_primary_keys = TablePrimaryKeys::new(vec!["id".to_string()]);
         let table_columns = TableColumns::new(vec!["id".to_string()]);
         let table_position = TablePosition::new(0);
         let table_offset = TableOffset::new(100);

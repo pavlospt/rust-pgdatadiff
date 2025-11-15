@@ -105,10 +105,6 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 return table_diff_result;
             }
 
-            // Prepare the primary keys for the table
-            // Will be used for query ordering when hashing data
-            let primary_keys = primary_keys.as_slice().join(",");
-
             let query_table_columns_input = QueryTableColumnsInput::new(diff_payload.schema_name().to_string(), table_name.clone());
 
             let columns = self
