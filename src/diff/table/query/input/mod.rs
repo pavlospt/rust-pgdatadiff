@@ -1,4 +1,4 @@
-use super::table_types::{TableName, TableOffset, TablePosition, TablePrimaryKeys};
+use super::table_types::{TableName, TableOffset, TablePosition, TablePrimaryKeys, TableColumns};
 use crate::diff::types::SchemaName;
 
 /// Represents the input for querying the count of a table.
@@ -64,6 +64,7 @@ pub struct QueryHashDataInput {
     schema_name: SchemaName,
     table_name: TableName,
     primary_keys: TablePrimaryKeys,
+    table_columns: TableColumns,
     position: TablePosition,
     offset: TableOffset,
 }
@@ -74,6 +75,7 @@ impl QueryHashDataInput {
         schema_name: SchemaName,
         table_name: TableName,
         primary_keys: TablePrimaryKeys,
+        table_columns: TableColumns,
         position: TablePosition,
         offset: TableOffset,
     ) -> Self {
@@ -81,6 +83,7 @@ impl QueryHashDataInput {
             schema_name,
             table_name,
             primary_keys,
+            table_columns,
             position,
             offset,
         }
@@ -98,6 +101,10 @@ impl QueryHashDataInput {
         self.primary_keys.clone()
     }
 
+    pub fn table_columns(&self) -> TableColumns {
+        self.table_columns.clone()
+    }
+
     pub fn position(&self) -> TablePosition {
         self.position.clone()
     }
@@ -109,15 +116,41 @@ impl QueryHashDataInput {
 
 /// Represents the input for querying primary keys.
 pub struct QueryPrimaryKeysInput {
+    table_schema: String,
     table_name: String,
 }
 
 impl QueryPrimaryKeysInput {
-    pub fn new(table_name: String) -> Self {
-        Self { table_name }
+    pub fn new(table_schema: String, table_name: String) -> Self {
+        Self { table_schema, table_name }
+    }
+
+    pub fn table_schema(&self) -> String {
+        self.table_schema.to_string()
     }
 
     pub fn table_name(&self) -> String {
         self.table_name.to_string()
+    }
+}
+
+
+/// Represents the input for querying table columns.
+pub struct QueryTableColumnsInput {
+    table_schema: String,
+    table_name: String,
+}
+
+impl QueryTableColumnsInput {
+    pub fn new(table_schema: String, table_name: String) -> Self {
+        Self { table_schema, table_name }
+    }
+
+    pub fn table_name(&self) -> String {
+        self.table_name.to_string()
+    }
+
+    pub fn table_schema(&self) -> String {
+        self.table_schema.to_string()
     }
 }

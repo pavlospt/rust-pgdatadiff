@@ -1,5 +1,5 @@
 use crate::diff::table::query::table_types::{
-    IncludedExcludedTables, TableMode, TableName, TableOffset, TablePosition, TablePrimaryKeys,
+    IncludedExcludedTables, TableMode, TableName, TableOffset, TablePosition, TablePrimaryKeys, TableColumns,
 };
 use crate::diff::types::SchemaName;
 use std::fmt::Display;
@@ -7,11 +7,13 @@ use std::fmt::Display;
 pub enum TableQuery {
     AllTablesForSchema(SchemaName, IncludedExcludedTables),
     CountRowsForTable(SchemaName, TableName),
-    FindPrimaryKeyForTable(TableName),
+    FindPrimaryKeyForTable(SchemaName, TableName),
+    FindColumnsForTable(SchemaName, TableName),
     HashQuery(
         SchemaName,
         TableName,
         TablePrimaryKeys,
+        TableColumns,
         TablePosition,
         TableOffset,
     ),
@@ -45,12 +47,12 @@ impl Display for TableQuery {
             TableQuery::CountRowsForTable(schema_name, table_name) => {
                 write!(
                     f,
-                    "SELECT count(*) FROM {}.{}",
+                    "SELECT count(*) FROM {}.\"{}\"",
                     schema_name.name(),
                     table_name.name()
                 )
             }
-            TableQuery::FindPrimaryKeyForTable(table_name) => write!(
+            TableQuery::FindPrimaryKeyForTable(schema_name, table_name) => write!(
                 f,
                 // language=postgresql
                 r#"
@@ -58,30 +60,46 @@ impl Display for TableQuery {
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = '{}'::regclass
+                WHERE  i.indrelid = '"{}"."{}"'::regclass
                 AND    i.indisprimary"#,
+                schema_name.name(),
+                table_name.name()
+            ),
+            TableQuery::FindColumnsForTable(schema_name, table_name) => write!(
+                f,
+                // language=postgresql
+                r#"
+                SELECT cs.column_name
+                FROM information_schema.columns cs
+                WHERE table_schema = '{}'
+                AND table_name = '{}'
+                ORDER BY column_name
+                "#,
+                schema_name.name(),
                 table_name.name()
             ),
             TableQuery::HashQuery(
                 schema_name,
                 table_name,
                 table_primary_keys,
+                table_columns,
                 table_position,
                 table_offset,
             ) => {
                 write!(
                     f,
                     r#"
-                    SELECT md5(array_agg(md5((t.*)::varchar))::varchar)
+                    SELECT md5(array_agg(md5(({})::varchar))::varchar)
                     FROM (
                         SELECT *
-                        FROM {}.{}
+                        FROM "{}"."{}"
                         ORDER BY {} limit {} offset {}
                     ) AS t
                     "#,
+                    table_columns.render("t"),
                     schema_name.name(),
                     table_name.name(),
-                    table_primary_keys.keys(),
+                    table_primary_keys.render(table_name.name()),
                     table_offset.offset(),
                     table_position.position(),
                 )
@@ -134,20 +152,21 @@ mod tests {
         let schema_name = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
         let query = TableQuery::CountRowsForTable(schema_name, table_name);
-        let expected = "SELECT count(*) FROM public.table1";
+        let expected = "SELECT count(*) FROM public.\"table1\"";
         assert_eq!(expected, query.to_string());
     }
 
     #[test]
     fn test_display_find_primary_key_for_table() {
+        let table_schema = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
-        let query = TableQuery::FindPrimaryKeyForTable(table_name);
+        let query = TableQuery::FindPrimaryKeyForTable(table_schema, table_name);
         let expected = r#"
                 SELECT a.attname
                 FROM   pg_index i
                 JOIN   pg_attribute a ON a.attrelid = i.indrelid
                                      AND a.attnum = ANY(i.indkey)
-                WHERE  i.indrelid = 'table1'::regclass
+                WHERE  i.indrelid = '"public"."table1"'::regclass
                 AND    i.indisprimary"#;
         assert_eq!(expected, query.to_string());
     }
@@ -156,22 +175,24 @@ mod tests {
     fn test_display_hash_query() {
         let schema_name = SchemaName::new("public".to_string());
         let table_name = TableName::new("table1".to_string());
-        let table_primary_keys = TablePrimaryKeys::new("id".to_string());
+        let table_primary_keys = TablePrimaryKeys::new(vec!["id".to_string()]);
+        let table_columns = TableColumns::new(vec!["id".to_string()]);
         let table_position = TablePosition::new(0);
         let table_offset = TableOffset::new(100);
         let query = TableQuery::HashQuery(
             schema_name,
             table_name,
             table_primary_keys,
+            table_columns,
             table_position,
             table_offset,
         );
         let expected = r#"
-                    SELECT md5(array_agg(md5((t.*)::varchar))::varchar)
+                    SELECT md5(array_agg(md5(("table1"."id")::varchar))::varchar)
                     FROM (
                         SELECT *
-                        FROM public.table1
-                        ORDER BY id limit 100 offset 0
+                        FROM "public"."table1"
+                        ORDER BY "id" limit 100 offset 0
                     ) AS t
                     "#;
         assert_eq!(expected, query.to_string());

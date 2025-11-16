@@ -60,6 +60,9 @@ enum Commands {
         /// Accept invalid TLS certificates for the second database
         #[arg(long, default_value_t = false, required = false)]
         accept_invalid_certs_second_db: bool,
+        /// Accept invalid TLS certificates for the second database
+        #[arg(long, default_value = "default", required = false)]
+        replica_identity: String,
     },
 }
 
@@ -85,6 +88,7 @@ async fn main_clap() -> Result<()> {
             schema_name,
             accept_invalid_certs_first_db,
             accept_invalid_certs_second_db,
+            replica_identity,
         } => {
             let payload = DiffPayload::builder()
                 .first_db(first_db.clone())
@@ -100,6 +104,7 @@ async fn main_clap() -> Result<()> {
                 .schema_name(schema_name.clone())
                 .accept_invalid_certs_first_db(*accept_invalid_certs_first_db)
                 .accept_invalid_certs_second_db(*accept_invalid_certs_second_db)
+                .replica_identity(replica_identity.clone())
                 .build();
             let _ = Differ::diff_dbs(payload).await;
             Ok(())
@@ -161,6 +166,10 @@ async fn main_inquire() -> Result<()> {
         Confirm::new("Do you want to accept invalid TLS cert for second DB?")
             .with_default(false)
             .prompt()?;
+    let replica_identity_full =
+        Confirm::new("For tables without a primary key, do you want to fall back to full-table ordering, a la REPLICA IDENTITY FULL?")
+            .with_default(false)
+            .prompt()?;
 
     let payload = DiffPayload::builder()
         .first_db(first_db)
@@ -186,6 +195,7 @@ async fn main_inquire() -> Result<()> {
         .schema_name(schema_name)
         .accept_invalid_certs_first_db(accept_invalid_certs_first_db)
         .accept_invalid_certs_second_db(accept_invalid_certs_second_db)
+        .replica_identity(if replica_identity_full { "full".to_string() } else { "default".to_string() })
         .build();
 
     let _ = Differ::diff_dbs(payload).await;

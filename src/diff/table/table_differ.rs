@@ -1,6 +1,6 @@
 use crate::diff::diff_payload::DiffPayload;
 use crate::diff::table::query::input::{
-    QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput,
+    QueryHashDataInput, QueryPrimaryKeysInput, QueryTableColumnsInput, QueryTableCountInput, QueryTableNamesInput
 };
 use crate::diff::table::query::output::{TableCountDiff, TableDiffOutput, TableSource};
 
@@ -8,7 +8,7 @@ use crate::diff::table::query::table_query_executor::{
     TableDualSourceQueryExecutor, TableSingleSourceQueryExecutor,
 };
 use crate::diff::table::query::table_types::{
-    TableName, TableOffset, TablePosition, TablePrimaryKeys,
+    TableColumns, TableName, TableOffset, TablePosition, TablePrimaryKeys
 };
 use anyhow::Result;
 use colored::Colorize;
@@ -92,22 +92,31 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 return table_diff_result;
             }
 
-            let query_primary_keys_input = QueryPrimaryKeysInput::new(table_name.clone());
+            let query_table_columns_input = QueryTableColumnsInput::new(diff_payload.schema_name().to_string(), table_name.clone());
+
+            let columns = self
+                .single_table_query_executor
+                .query_table_columns(query_table_columns_input)
+                .await;
+
+            let query_primary_keys_input = QueryPrimaryKeysInput::new(diff_payload.schema_name().to_string(), table_name.clone());
 
             let primary_keys = self
                 .single_table_query_executor
                 .query_primary_keys(query_primary_keys_input)
                 .await;
 
+            let primary_keys = if primary_keys.is_empty() && diff_payload.replica_identity() == "full" {
+                columns.clone()
+            } else {
+                primary_keys
+            };
+
             // If no primary keys found, return the result
             if primary_keys.is_empty() {
                 let table_diff_result = TableDiffOutput::NoPrimaryKeyFound(table_name.clone());
                 return table_diff_result;
             }
-
-            // Prepare the primary keys for the table
-            // Will be used for query ordering when hashing data
-            let primary_keys = primary_keys.as_slice().join(",");
 
             let total_rows = match table_diff_result {
                 TableDiffOutput::NoCountDiff(_, rows) => rows,
@@ -121,6 +130,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
             let query_table_name = TableName::new(table_name.clone());
             let table_offset = TableOffset::new(diff_payload.chunk_size());
             let table_primary_keys = TablePrimaryKeys::new(primary_keys);
+            let table_columns = TableColumns::new(columns);
 
             let start = Instant::now();
 
@@ -131,6 +141,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                     query_table_name,
                     table_offset,
                     table_primary_keys,
+                    table_columns,
                     total_rows,
                     start,
                 )
@@ -225,6 +236,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
         query_table_name: TableName,
         table_offset: TableOffset,
         table_primary_keys: TablePrimaryKeys,
+        table_columns: TableColumns,
         total_rows: i64,
         start: Instant,
     ) -> Option<TableDiffOutput> {
@@ -235,6 +247,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
                 schema_name.clone(),
                 query_table_name.clone(),
                 table_primary_keys.clone(),
+                table_columns.clone(),
                 TablePosition::new(position),
                 table_offset.clone(),
             );
