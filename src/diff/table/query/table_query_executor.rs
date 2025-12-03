@@ -73,6 +73,7 @@ use crate::diff::table::query::input::{
 };
 use crate::diff::table::query::table_query::TableQuery;
 use crate::diff::table::query::table_types::{IncludedExcludedTables, TableName};
+use crate::diff::types::SchemaName;
 
 #[cfg(test)]
 use mockall::automock;
@@ -145,7 +146,7 @@ impl TableSingleSourceQueryExecutor for TableSingleSourceQueryExecutorImpl {
 
         // Prepare the query for primary keys fetching
         let find_primary_key_query =
-            TableQuery::FindPrimaryKeyForTable(TableName::new(input.table_name()));
+            TableQuery::FindPrimaryKeyForTable(SchemaName::new(input.schema_name()), TableName::new(input.table_name()));
 
         // Fetch primary keys for the table
         let query_result = client
