@@ -42,7 +42,7 @@ const SEED_SQL: &str = r#"
 INSERT INTO product SELECT id, concat('Product ', id) FROM GENERATE_SERIES(1, 100) as id;
 INSERT INTO users SELECT id, concat('User ', id) FROM GENERATE_SERIES(1, 200) as id;
 INSERT INTO country SELECT id, concat('Country ', id) FROM GENERATE_SERIES(1, 10) as id;
-INSERT INTO city SELECT id, concat('City ', id), floor(random() * 10 + 1)::int FROM GENERATE_SERIES(1, 50) as id;
+INSERT INTO city SELECT id, concat('City ', id), (id % 10 + 1)::int FROM GENERATE_SERIES(1, 50) as id;
 "#;
 
 const DIFFERENCE_SQL: &str = r#"
@@ -249,7 +249,7 @@ async fn integration_diff_identical_databases_no_diff() {
         if let DiffOutput::TableDiff(table_output) = result {
             let s = table_output.to_string().to_string();
             eprintln!("  {s}");
-            if s.contains("difference") || s.contains("not exist") {
+            if !s.contains("No difference") {
                 diff_count += 1;
             }
         }
