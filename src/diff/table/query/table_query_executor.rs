@@ -7,29 +7,32 @@
 /// # Examples
 ///
 /// ```no_run
-/// use sqlx::postgres::PgPool;
+/// use deadpool_postgres::{Config, Pool, Runtime};
+/// use deadpool_postgres::tokio_postgres::NoTls;
 /// use rust_pgdatadiff::diff::table::query::table_query_executor::{
 ///     TableSingleSourceQueryExecutor, TableSingleSourceQueryExecutorImpl,
 ///     TableDualSourceQueryExecutor, TableDualSourceQueryExecutorImpl,
 /// };
-/// use rust_pgdatadiff::diff::table::query::input::{QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput};///
+/// use rust_pgdatadiff::diff::table::query::input::{QueryHashDataInput, QueryPrimaryKeysInput, QueryTableCountInput, QueryTableNamesInput};
 /// use rust_pgdatadiff::diff::table::query::table_types::{TableName, TableOffset, TablePosition, TablePrimaryKeys};
 /// use rust_pgdatadiff::diff::types::SchemaName;
 ///
 /// #[tokio::main]
 /// async fn main() {
 ///     // Create a single data source executor
-///     let db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database")
-///         .await
+///     let mut cfg = Config::new();
+///     cfg.url = Some("postgres://user:password@localhost:5432/database".to_string());
+///     let db_pool: Pool = cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
-///     let single_source_executor = TableSingleSourceQueryExecutorImpl::new(db_client);
+///     let single_source_executor = TableSingleSourceQueryExecutorImpl::new(db_pool);
 ///
 ///     // Query table names
 ///     let schema_name = SchemaName::new("public".to_string());
-///     let included_tables = vec!["table1", "table2"];
+///     let included_tables = vec!["table1".to_string(), "table2".to_string()];
 ///     let excluded_tables: Vec<String> = vec![];
 ///     let table_names = single_source_executor
-///         .query_table_names(QueryTableNamesInput::new(schema_name, included_tables, excluded_tables))
+///         .query_table_names(QueryTableNamesInput::new(schema_name, &included_tables, &excluded_tables))
 ///         .await;
 ///
 ///     // Query primary keys
@@ -38,13 +41,17 @@
 ///         .await;
 ///
 ///     // Create a dual data source executor
-///     let first_db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database1")
-///         .await
+///     let mut first_cfg = Config::new();
+///     first_cfg.url = Some("postgres://user:password@localhost:5432/database1".to_string());
+///     let first_db_pool: Pool = first_cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
-///     let second_db_client: PgPool = PgPool::connect("postgres://user:password@localhost:5432/database2")
-///         .await
+///     let mut second_cfg = Config::new();
+///     second_cfg.url = Some("postgres://user:password@localhost:5432/database2".to_string());
+///     let second_db_pool: Pool = second_cfg
+///         .create_pool(Some(Runtime::Tokio1), NoTls)
 ///         .unwrap();
-///     let dual_source_executor = TableDualSourceQueryExecutorImpl::new(first_db_client, second_db_client);
+///     let dual_source_executor = TableDualSourceQueryExecutorImpl::new(first_db_pool, second_db_pool);
 ///
 ///     // Query table counts
 ///     let schema_name = SchemaName::new("public");
@@ -205,9 +212,15 @@ impl TableDualSourceQueryExecutorImpl {
 #[async_trait]
 impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
     async fn query_table_count(&self, input: QueryTableCountInput) -> (Result<i64>, Result<i64>) {
-        // Clone the database clients
-        let first_client = self.first_db_client.get().await.unwrap();
-        let second_client = self.second_db_client.get().await.unwrap();
+        // Acquire connections in parallel
+        let (first_client, second_client) = futures::future::join(
+            self.first_db_client.get(),
+            self.second_db_client.get(),
+        )
+        .await;
+
+        let first_client = first_client.unwrap();
+        let second_client = second_client.unwrap();
 
         // Prepare the query for counting rows
         let count_rows_query = TableQuery::CountRowsForTable(
@@ -217,15 +230,12 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
         let count_query_binding = count_rows_query.to_string();
 
-        // Prepare count queries for both databases
-        let first_count = first_client.query_one(&count_query_binding, &[]);
-        let second_count = second_client.query_one(&count_query_binding, &[]);
-
-        // Fetch counts for both databases
-        let count_fetch_futures = futures::future::join_all(vec![first_count, second_count]).await;
-
-        let first_count = count_fetch_futures.first().unwrap();
-        let second_count = count_fetch_futures.get(1).unwrap();
+        // Execute count queries in parallel for both databases
+        let (first_count, second_count) = futures::future::join(
+            first_client.query_one(&count_query_binding, &[]),
+            second_client.query_one(&count_query_binding, &[]),
+        )
+        .await;
 
         // Map count results to [anyhow::Result<i64>]
         let first_count: Result<i64> = match first_count {
@@ -242,9 +252,15 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
     }
 
     async fn query_hash_data(&self, input: QueryHashDataInput) -> (String, String) {
-        // Clone the database clients
-        let first_client = self.first_db_client.get().await.unwrap();
-        let second_client = self.second_db_client.get().await.unwrap();
+        // Acquire connections in parallel
+        let (first_client, second_client) = futures::future::join(
+            self.first_db_client.get(),
+            self.second_db_client.get(),
+        )
+        .await;
+
+        let first_client = first_client.unwrap();
+        let second_client = second_client.unwrap();
 
         // Prepare the query for fetching data hashes
         let hash_query = TableQuery::HashQuery(
@@ -257,15 +273,12 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
         let hash_query_binding = hash_query.to_string();
 
-        // Prepare hash queries for both databases
-        let first_hash = first_client.query_one(&hash_query_binding, &[]);
-        let second_hash = second_client.query_one(&hash_query_binding, &[]);
-
-        // Fetch hashes for both databases
-        let hash_fetch_futures = futures::future::join_all(vec![first_hash, second_hash]).await;
-
-        let first_hash = hash_fetch_futures.first().unwrap();
-        let second_hash = hash_fetch_futures.get(1).unwrap();
+        // Execute hash queries in parallel for both databases
+        let (first_hash, second_hash) = futures::future::join(
+            first_client.query_one(&hash_query_binding, &[]),
+            second_client.query_one(&hash_query_binding, &[]),
+        )
+        .await;
 
         // Map hash results to [String]
         let first_hash = match first_hash {

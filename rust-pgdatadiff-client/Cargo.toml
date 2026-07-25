@@ -16,8 +16,8 @@ tokio.workspace = true
 rust-pgdatadiff.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-clap = { version = "4.5.45", features = ["derive"], optional = true }
-inquire = { version = "0.7.5", optional = true }
+clap = { workspace = true, optional = true }
+inquire = { version = "0.7", optional = true }
 
 [features]
 default = ["with-inquire"]

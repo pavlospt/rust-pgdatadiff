@@ -16,21 +16,20 @@ members = ["rust-pgdatadiff-client"]
 [workspace.dependencies]
 anyhow = "1"
 tokio = { version = "1", features = ["full"] }
-colored = "3.0.0"
-futures = { version = "0.3.31", default-features = true, features = [
+colored = "3"
+futures = { version = "0.3", default-features = true, features = [
     "async-await",
 ] }
 async-trait = "0.1"
-pretty_assertions = "1.4"
+pretty_assertions = "1"
 mockall = "0.13"
-tracing-subscriber = "0.3.19"
-tracing = "0.1.41"
-cargo-nextest = "0.9.96"
-deadpool-postgres = "0.14.1"
-postgres-native-tls = "0.5.1"
-native-tls = "0.2.14"
-bon = "3.7"
-rust-pgdatadiff = { path = ".", version = "0.1.7" }
+tracing-subscriber = "0.3"
+tracing = "0.1"
+deadpool-postgres = "0.14"
+postgres-native-tls = "0.5"
+native-tls = "0.2"
+clap = { version = "4", features = ["derive"] }
+rust-pgdatadiff = { path = ".", version = "0.1.8" }
 
 [dependencies]
 anyhow.workspace = true
@@ -41,19 +40,15 @@ async-trait.workspace = true
 pretty_assertions.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
-cargo-nextest.workspace = true
 deadpool-postgres.workspace = true
 postgres-native-tls.workspace = true
 native-tls.workspace = true
-bon.workspace = true
-
-[dependencies.clap]
-version = "4.5.41"
-features = ["derive"]
 
 [dev-dependencies]
 mockall.workspace = true
 tokio.workspace = true
+clap.workspace = true
+testcontainers = { version = "0.27", features = ["http_wait"] }
 
 [lib]
 test = true

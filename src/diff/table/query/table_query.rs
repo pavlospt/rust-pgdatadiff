@@ -101,7 +101,7 @@ mod tests {
         let included_tables = vec!["table1".to_string(), "table2".to_string()];
         let excluded_tables: Vec<String> = vec![];
         let included_excluded_tables =
-            IncludedExcludedTables::new(included_tables, excluded_tables);
+            IncludedExcludedTables::new(&included_tables, &excluded_tables);
         let query = TableQuery::AllTablesForSchema(schema_name, included_excluded_tables);
         let expected = r#"
                 SELECT table_name
@@ -116,9 +116,9 @@ mod tests {
     fn test_display_all_tables_for_schema_with_excluded_tables() {
         let schema_name = SchemaName::new("public");
         let included_tables: Vec<String> = vec![];
-        let excluded_tables = vec!["table1", "table2"];
+        let excluded_tables = vec!["table1".to_string(), "table2".to_string()];
         let included_excluded_tables =
-            IncludedExcludedTables::new(included_tables, excluded_tables);
+            IncludedExcludedTables::new(&included_tables, &excluded_tables);
         let query = TableQuery::AllTablesForSchema(schema_name, included_excluded_tables);
         let expected = r#"
                 SELECT table_name

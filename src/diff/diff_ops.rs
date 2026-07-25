@@ -142,7 +142,7 @@ impl Differ {
 
             table_diff
                 .into_iter()
-                .chain(sequence_diff.into_iter())
+                .chain(sequence_diff)
                 .collect::<Vec<DiffOutput>>()
         };
 

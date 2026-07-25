@@ -36,13 +36,13 @@ impl QueryTableNamesInput {
     /// Creates a new `QueryTableNamesInput` instance.
     pub fn new(
         schema_name: SchemaName,
-        included_tables: Vec<impl Into<String>>,
-        excluded_tables: Vec<impl Into<String>>,
+        included_tables: &[String],
+        excluded_tables: &[String],
     ) -> Self {
         Self {
             schema_name,
-            included_tables: included_tables.into_iter().map(|t| t.into()).collect(),
-            excluded_tables: excluded_tables.into_iter().map(|t| t.into()).collect(),
+            included_tables: included_tables.to_vec(),
+            excluded_tables: excluded_tables.to_vec(),
         }
     }
 
@@ -50,12 +50,12 @@ impl QueryTableNamesInput {
         &self.schema_name
     }
 
-    pub fn included_tables(&self) -> Vec<String> {
-        self.included_tables.to_vec()
+    pub fn included_tables(&self) -> &[String] {
+        &self.included_tables
     }
 
-    pub fn excluded_tables(&self) -> Vec<String> {
-        self.excluded_tables.to_vec()
+    pub fn excluded_tables(&self) -> &[String] {
+        &self.excluded_tables
     }
 }
 

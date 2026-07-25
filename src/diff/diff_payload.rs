@@ -1,5 +1,3 @@
-use bon::bon;
-
 /// Represents a payload for performing database diffs.
 pub struct DiffPayload {
     first_db: String,
@@ -17,64 +15,140 @@ pub struct DiffPayload {
     accept_invalid_certs_second_db: bool,
 }
 
-#[bon]
-impl DiffPayload {
-    /// Creates a new `DiffPayload` instance.
-    ///
-    /// # Arguments
-    ///
-    /// * `first_db` - The name of the first database.
-    /// * `second_db` - The name of the second database.
-    /// * `only_data` - A flag indicating whether to compare only data.
-    /// * `only_sequences` - A flag indicating whether to compare only sequences.
-    /// * `count_only` - A flag indicating whether to count differences only.
-    /// * `chunk_size` - The chunk size for processing large tables.
-    /// * `start_position` - The start position for the comparison.
-    /// * `max_connections` - The maximum number of database connections to use.
-    /// * `include_tables` - A list of tables to include in the comparison.
-    /// * `exclude_tables` - A list of tables to exclude in the comparison.
-    /// * `schema_name` - The name of the schema to compare.
-    ///
-    /// # Returns
-    ///
-    /// A new `DiffPayload` instance.
-    #[builder]
-    pub fn new(
-        first_db: impl Into<String>,
-        second_db: impl Into<String>,
-        only_tables: bool,
-        only_sequences: bool,
-        only_count: bool,
-        chunk_size: i64,
-        start_position: i64,
-        max_connections: i64,
-        include_tables: Vec<impl Into<String>>,
-        exclude_tables: Vec<impl Into<String>>,
-        schema_name: impl Into<String>,
-        accept_invalid_certs_first_db: bool,
-        accept_invalid_certs_second_db: bool,
-    ) -> Self {
-        let has_included_tables = !include_tables.is_empty();
-        let has_excluded_tables = !exclude_tables.is_empty();
+/// Builder for `DiffPayload`.
+///
+/// All fields are required. Call `.build()` after setting all fields.
+pub struct DiffPayloadBuilder {
+    first_db: Option<String>,
+    second_db: Option<String>,
+    only_tables: Option<bool>,
+    only_sequences: Option<bool>,
+    only_count: Option<bool>,
+    chunk_size: Option<i64>,
+    start_position: Option<i64>,
+    max_connections: Option<i64>,
+    include_tables: Option<Vec<String>>,
+    exclude_tables: Option<Vec<String>>,
+    schema_name: Option<String>,
+    accept_invalid_certs_first_db: Option<bool>,
+    accept_invalid_certs_second_db: Option<bool>,
+}
 
-        if has_included_tables && has_excluded_tables {
+impl DiffPayloadBuilder {
+    pub fn first_db(mut self, value: impl Into<String>) -> Self {
+        self.first_db = Some(value.into());
+        self
+    }
+    pub fn second_db(mut self, value: impl Into<String>) -> Self {
+        self.second_db = Some(value.into());
+        self
+    }
+    pub fn only_tables(mut self, value: bool) -> Self {
+        self.only_tables = Some(value);
+        self
+    }
+    pub fn only_sequences(mut self, value: bool) -> Self {
+        self.only_sequences = Some(value);
+        self
+    }
+    pub fn only_count(mut self, value: bool) -> Self {
+        self.only_count = Some(value);
+        self
+    }
+    pub fn chunk_size(mut self, value: i64) -> Self {
+        self.chunk_size = Some(value);
+        self
+    }
+    pub fn start_position(mut self, value: i64) -> Self {
+        self.start_position = Some(value);
+        self
+    }
+    pub fn max_connections(mut self, value: i64) -> Self {
+        self.max_connections = Some(value);
+        self
+    }
+    pub fn include_tables(mut self, value: Vec<impl Into<String>>) -> Self {
+        self.include_tables = Some(value.into_iter().map(|t| t.into()).collect());
+        self
+    }
+    pub fn exclude_tables(mut self, value: Vec<impl Into<String>>) -> Self {
+        self.exclude_tables = Some(value.into_iter().map(|t| t.into()).collect());
+        self
+    }
+    pub fn schema_name(mut self, value: impl Into<String>) -> Self {
+        self.schema_name = Some(value.into());
+        self
+    }
+    pub fn accept_invalid_certs_first_db(mut self, value: bool) -> Self {
+        self.accept_invalid_certs_first_db = Some(value);
+        self
+    }
+    pub fn accept_invalid_certs_second_db(mut self, value: bool) -> Self {
+        self.accept_invalid_certs_second_db = Some(value);
+        self
+    }
+
+    pub fn build(self) -> DiffPayload {
+        let first_db = self.first_db.expect("first_db is required");
+        let second_db = self.second_db.expect("second_db is required");
+        let only_tables = self.only_tables.expect("only_tables is required");
+        let only_sequences = self.only_sequences.expect("only_sequences is required");
+        let only_count = self.only_count.expect("only_count is required");
+        let chunk_size = self.chunk_size.expect("chunk_size is required");
+        let start_position = self.start_position.expect("start_position is required");
+        let max_connections = self.max_connections.expect("max_connections is required");
+        let include_tables: Vec<String> = self
+            .include_tables
+            .expect("include_tables is required");
+        let exclude_tables: Vec<String> = self
+            .exclude_tables
+            .expect("exclude_tables is required");
+        let schema_name = self.schema_name.expect("schema_name is required");
+        let accept_invalid_certs_first_db = self
+            .accept_invalid_certs_first_db
+            .expect("accept_invalid_certs_first_db is required");
+        let accept_invalid_certs_second_db = self
+            .accept_invalid_certs_second_db
+            .expect("accept_invalid_certs_second_db is required");
+
+        if !include_tables.is_empty() && !exclude_tables.is_empty() {
             panic!("Cannot include and exclude tables at the same time");
         }
 
-        Self {
-            first_db: first_db.into(),
-            second_db: second_db.into(),
+        DiffPayload {
+            first_db,
+            second_db,
             only_tables,
             only_sequences,
             only_count,
             chunk_size,
             start_position,
             max_connections,
-            include_tables: include_tables.into_iter().map(|t| t.into()).collect(),
-            exclude_tables: exclude_tables.into_iter().map(|t| t.into()).collect(),
-            schema_name: schema_name.into(),
+            include_tables,
+            exclude_tables,
+            schema_name,
             accept_invalid_certs_first_db,
             accept_invalid_certs_second_db,
+        }
+    }
+}
+
+impl DiffPayload {
+    pub fn builder() -> DiffPayloadBuilder {
+        DiffPayloadBuilder {
+            first_db: None,
+            second_db: None,
+            only_tables: None,
+            only_sequences: None,
+            only_count: None,
+            chunk_size: None,
+            start_position: None,
+            max_connections: None,
+            include_tables: None,
+            exclude_tables: None,
+            schema_name: None,
+            accept_invalid_certs_first_db: None,
+            accept_invalid_certs_second_db: None,
         }
     }
 
@@ -102,10 +176,10 @@ impl DiffPayload {
     pub fn max_connections(&self) -> u32 {
         self.max_connections as u32
     }
-    pub fn included_tables(&self) -> &Vec<String> {
+    pub fn included_tables(&self) -> &[String] {
         &self.include_tables
     }
-    pub fn excluded_tables(&self) -> &Vec<String> {
+    pub fn excluded_tables(&self) -> &[String] {
         &self.exclude_tables
     }
     pub fn schema_name(&self) -> &str {

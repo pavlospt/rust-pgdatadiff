@@ -15,6 +15,8 @@
 /// use rust_pgdatadiff::diff::sequence::query::sequence_query_executor::SequenceDualSourceQueryExecutor;
 /// use rust_pgdatadiff::diff::sequence::query::sequence_types::SequenceName;
 /// use rust_pgdatadiff::diff::sequence::query::input::QueryLastValuesInput;
+/// use deadpool_postgres::{Config, Pool, Runtime};
+/// use deadpool_postgres::tokio_postgres::NoTls;
 ///
 /// #[tokio::main]
 /// async fn main() {
@@ -148,9 +150,15 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
         &self,
         input: QueryLastValuesInput,
     ) -> (Result<i64>, Result<i64>) {
-        // Clone the database clients
-        let first_client = self.first_db_pool.get().await.unwrap();
-        let second_client = self.second_db_pool.get().await.unwrap();
+        // Acquire connections in parallel
+        let (first_client, second_client) = futures::future::join(
+            self.first_db_pool.get(),
+            self.second_db_pool.get(),
+        )
+        .await;
+
+        let first_client = first_client.unwrap();
+        let second_client = second_client.unwrap();
 
         let sequence_query = SequenceQuery::LastValue(
             input.schema_name().to_owned(),
@@ -159,11 +167,11 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
 
         let query_binding = sequence_query.to_string();
 
-        let first_result = first_client.query_one(&query_binding, &[]);
-        let second_result = second_client.query_one(&query_binding, &[]);
-
-        let (first_result, second_result) =
-            futures::future::join(first_result, second_result).await;
+        let (first_result, second_result) = futures::future::join(
+            first_client.query_one(&query_binding, &[]),
+            second_client.query_one(&query_binding, &[]),
+        )
+        .await;
 
         let first_count: Result<i64> = match first_result {
             Ok(pg_row) => Ok(pg_row.try_get("last_value").unwrap()),

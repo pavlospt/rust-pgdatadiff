@@ -1,6 +1,7 @@
 use anyhow::Result;
 use colored::Colorize;
 
+use futures::stream::{FuturesUnordered, StreamExt};
 use tracing::{debug, info};
 
 use crate::diff::diff_output::DiffOutput;
@@ -38,38 +39,47 @@ impl<SQE: SequenceSingleSourceQueryExecutor, DSQE: SequenceDualSourceQueryExecut
 
         sequences.sort_by_key(|s| s.to_lowercase());
 
-        let sorted_sequences = sequences.to_owned();
+        let sorted_sequences = sequences;
 
-        let futures = sorted_sequences.iter().map(|sequence_name| async {
-            let start = Instant::now();
+        // Use FuturesUnordered for bounded concurrent processing
+        let mut futures: FuturesUnordered<_> = sorted_sequences
+            .iter()
+            .map(|sequence_name| {
+                let schema_name = schema_name.to_owned();
+                let sequence_name = sequence_name.to_owned();
+                async move {
+                    let start = Instant::now();
 
-            let schema_name = SchemaName::new(schema_name.to_owned());
-            let sequence_name = SequenceName::new(sequence_name.to_owned());
-            let input = QueryLastValuesInput::new(schema_name, sequence_name.to_owned());
-            let (first_result, second_result) = self
-                .dual_sequence_query_executor
-                .query_sequence_last_values(input)
-                .await;
+                    let schema_name = SchemaName::new(schema_name);
+                    let sequence_name_owned = SequenceName::new(sequence_name);
+                    let input =
+                        QueryLastValuesInput::new(schema_name, sequence_name_owned.clone());
+                    let (first_result, second_result) = self
+                        .dual_sequence_query_executor
+                        .query_sequence_last_values(input)
+                        .await;
 
-            debug!(
-                "{}",
-                format!("Analyzing sequence: {}", &sequence_name.name())
-                    .yellow()
-                    .bold()
-            );
+                    debug!(
+                        "{}",
+                        format!("Analyzing sequence: {}", sequence_name_owned.name())
+                            .yellow()
+                            .bold()
+                    );
 
-            let sequence_diff_result =
-                Self::extract_result(sequence_name.name(), first_result, second_result);
+                    let sequence_diff_result =
+                        Self::extract_result(sequence_name_owned.name(), first_result, second_result);
 
-            let elapsed = start.elapsed();
-            debug!(
-                "{}",
-                format!("Sequence analysis completed in: {}ms", elapsed.as_millis())
-            );
-            debug!("##############################################");
+                    let elapsed = start.elapsed();
+                    debug!(
+                        "{}",
+                        format!("Sequence analysis completed in: {}ms", elapsed.as_millis())
+                    );
+                    debug!("##############################################");
 
-            sequence_diff_result
-        });
+                    sequence_diff_result
+                }
+            })
+            .collect();
 
         info!(
             "{}",
@@ -77,8 +87,12 @@ impl<SQE: SequenceSingleSourceQueryExecutor, DSQE: SequenceDualSourceQueryExecut
                 .yellow()
                 .bold()
         );
+
         let start = Instant::now();
-        let sequences_analysed = futures::future::join_all(futures).await;
+        let mut sequences_analysed = Vec::with_capacity(futures.len());
+        while let Some(result) = futures.next().await {
+            sequences_analysed.push(result);
+        }
         let elapsed = start.elapsed();
         debug!(
             "{}",
