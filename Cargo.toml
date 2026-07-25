@@ -1,6 +1,6 @@
 [package]
 name = "rust-pgdatadiff"
-version = "0.1.8"
+version = "0.1.9"
 license = "MIT"
 edition = "2024"
 description = "Rust library for comparing two PostgreSQL databases"
@@ -29,7 +29,7 @@ deadpool-postgres = "0.14"
 postgres-native-tls = "0.5"
 native-tls = "0.2"
 clap = { version = "4", features = ["derive"] }
-rust-pgdatadiff = { path = ".", version = "0.1.8" }
+rust-pgdatadiff = { path = ".", version = "0.1.9" }
 
 [dependencies]
 anyhow.workspace = true
