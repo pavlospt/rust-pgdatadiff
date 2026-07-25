@@ -71,6 +71,24 @@ async fn create_pool(port: u16) -> Pool {
     cfg.create_pool(Some(Runtime::Tokio1), NoTls).unwrap()
 }
 
+async fn wait_for_postgres(pool: &Pool) {
+    for i in 0..30 {
+        match pool.get().await {
+            Ok(client) => {
+                if client.simple_query("SELECT 1").await.is_ok() {
+                    return;
+                }
+            }
+            Err(_) => {}
+        }
+        if i == 0 {
+            eprintln!("Waiting for Postgres to be ready...");
+        }
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+    }
+    panic!("Postgres did not become ready within 30s");
+}
+
 async fn setup_schema(pool: &Pool, sql: &str) {
     let client = pool.get().await.unwrap();
     client.batch_execute(sql).await.unwrap();
@@ -111,6 +129,9 @@ async fn integration_diff_detects_row_count_differences() {
 
     let pool1 = create_pool(db1_port).await;
     let pool2 = create_pool(db2_port).await;
+
+    wait_for_postgres(&pool1).await;
+    wait_for_postgres(&pool2).await;
 
     setup_schema(&pool1, SETUP_SQL).await;
     setup_schema(&pool1, SEED_SQL).await;
@@ -190,6 +211,9 @@ async fn integration_diff_identical_databases_no_diff() {
 
     let pool1 = create_pool(db1_port).await;
     let pool2 = create_pool(db2_port).await;
+
+    wait_for_postgres(&pool1).await;
+    wait_for_postgres(&pool2).await;
 
     setup_schema(&pool1, SETUP_SQL).await;
     setup_schema(&pool1, SEED_SQL).await;
