@@ -213,11 +213,8 @@ impl TableDualSourceQueryExecutorImpl {
 impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
     async fn query_table_count(&self, input: QueryTableCountInput) -> (Result<i64>, Result<i64>) {
         // Acquire connections in parallel
-        let (first_client, second_client) = futures::future::join(
-            self.first_db_client.get(),
-            self.second_db_client.get(),
-        )
-        .await;
+        let (first_client, second_client) =
+            futures::future::join(self.first_db_client.get(), self.second_db_client.get()).await;
 
         let first_client = first_client.unwrap();
         let second_client = second_client.unwrap();
@@ -253,11 +250,8 @@ impl TableDualSourceQueryExecutor for TableDualSourceQueryExecutorImpl {
 
     async fn query_hash_data(&self, input: QueryHashDataInput) -> (String, String) {
         // Acquire connections in parallel
-        let (first_client, second_client) = futures::future::join(
-            self.first_db_client.get(),
-            self.second_db_client.get(),
-        )
-        .await;
+        let (first_client, second_client) =
+            futures::future::join(self.first_db_client.get(), self.second_db_client.get()).await;
 
         let first_client = first_client.unwrap();
         let second_client = second_client.unwrap();

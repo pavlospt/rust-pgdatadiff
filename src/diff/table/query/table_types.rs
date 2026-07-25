@@ -61,10 +61,7 @@ pub enum TableMode {
 }
 
 impl IncludedExcludedTables {
-    pub fn new(
-        include_tables: &[String],
-        exclude_tables: &[String],
-    ) -> Self {
+    pub fn new(include_tables: &[String], exclude_tables: &[String]) -> Self {
         if !include_tables.is_empty() && !exclude_tables.is_empty() {
             panic!("Cannot include and exclude tables at the same time");
         }

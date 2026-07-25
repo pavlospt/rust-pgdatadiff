@@ -52,8 +52,7 @@ impl<SQE: SequenceSingleSourceQueryExecutor, DSQE: SequenceDualSourceQueryExecut
 
                     let schema_name = SchemaName::new(schema_name);
                     let sequence_name_owned = SequenceName::new(sequence_name);
-                    let input =
-                        QueryLastValuesInput::new(schema_name, sequence_name_owned.clone());
+                    let input = QueryLastValuesInput::new(schema_name, sequence_name_owned.clone());
                     let (first_result, second_result) = self
                         .dual_sequence_query_executor
                         .query_sequence_last_values(input)
@@ -66,8 +65,11 @@ impl<SQE: SequenceSingleSourceQueryExecutor, DSQE: SequenceDualSourceQueryExecut
                             .bold()
                     );
 
-                    let sequence_diff_result =
-                        Self::extract_result(sequence_name_owned.name(), first_result, second_result);
+                    let sequence_diff_result = Self::extract_result(
+                        sequence_name_owned.name(),
+                        first_result,
+                        second_result,
+                    );
 
                     let elapsed = start.elapsed();
                     debug!(

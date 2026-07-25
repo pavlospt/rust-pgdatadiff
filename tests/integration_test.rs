@@ -1,13 +1,13 @@
-use deadpool_postgres::{Config, ManagerConfig, Pool, PoolConfig, RecyclingMethod, Runtime};
 use deadpool_postgres::tokio_postgres::NoTls;
+use deadpool_postgres::{Config, ManagerConfig, Pool, PoolConfig, RecyclingMethod, Runtime};
 use rust_pgdatadiff::diff::diff_ops::Differ;
 use rust_pgdatadiff::diff::diff_output::DiffOutput;
 use rust_pgdatadiff::diff::diff_payload::DiffPayload;
 use std::time::Instant;
 use testcontainers::{
+    ContainerAsync, ContainerRequest, GenericImage, ImageExt,
     core::{IntoContainerPort, WaitFor},
     runners::AsyncRunner,
-    ContainerAsync, ContainerRequest, GenericImage, ImageExt,
 };
 
 const SETUP_SQL: &str = r#"
@@ -231,6 +231,9 @@ async fn integration_diff_identical_databases_no_diff() {
         }
     }
 
-    assert_eq!(diff_count, 0, "Expected no differences but found {diff_count}");
+    assert_eq!(
+        diff_count, 0,
+        "Expected no differences but found {diff_count}"
+    );
     assert!(diff_ms < 15_000, "Diff took {diff_ms}ms, expected < 15s");
 }

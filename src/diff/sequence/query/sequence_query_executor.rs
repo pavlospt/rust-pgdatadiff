@@ -151,11 +151,8 @@ impl SequenceDualSourceQueryExecutor for SequenceDualSourceQueryExecutorImpl {
         input: QueryLastValuesInput,
     ) -> (Result<i64>, Result<i64>) {
         // Acquire connections in parallel
-        let (first_client, second_client) = futures::future::join(
-            self.first_db_pool.get(),
-            self.second_db_pool.get(),
-        )
-        .await;
+        let (first_client, second_client) =
+            futures::future::join(self.first_db_pool.get(), self.second_db_pool.get()).await;
 
         let first_client = first_client.unwrap();
         let second_client = second_client.unwrap();

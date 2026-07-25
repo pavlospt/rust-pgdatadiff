@@ -97,12 +97,8 @@ impl DiffPayloadBuilder {
         let chunk_size = self.chunk_size.expect("chunk_size is required");
         let start_position = self.start_position.expect("start_position is required");
         let max_connections = self.max_connections.expect("max_connections is required");
-        let include_tables: Vec<String> = self
-            .include_tables
-            .expect("include_tables is required");
-        let exclude_tables: Vec<String> = self
-            .exclude_tables
-            .expect("exclude_tables is required");
+        let include_tables: Vec<String> = self.include_tables.expect("include_tables is required");
+        let exclude_tables: Vec<String> = self.exclude_tables.expect("exclude_tables is required");
         let schema_name = self.schema_name.expect("schema_name is required");
         let accept_invalid_certs_first_db = self
             .accept_invalid_certs_first_db

@@ -85,9 +85,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
 
                     info!(
                         "{}",
-                        format!("Analyzing table: {}", table_name)
-                            .yellow()
-                            .bold()
+                        format!("Analyzing table: {}", table_name).yellow().bold()
                     );
 
                     // Start counts comparison
@@ -185,9 +183,7 @@ impl<TQE: TableSingleSourceQueryExecutor, DTQE: TableDualSourceQueryExecutor>
 
         info!(
             "{}",
-            "Waiting for table analysis to complete…"
-                .yellow()
-                .bold()
+            "Waiting for table analysis to complete…".yellow().bold()
         );
 
         let start = Instant::now();
