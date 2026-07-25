@@ -1,6 +1,6 @@
 # Rust PGDataDiff
 
-`rust-pgdatadiff` is a re-write of the Python version of [pgdatadiff](https://github.com/dmarkey/pgdatadiff)
+`rust-pgdatadiff` is a rewrite of the Python version of [pgdatadiff](https://github.com/dmarkey/pgdatadiff)
 
 ## What makes it different?
 
@@ -94,26 +94,29 @@ use rust_pgdatadiff::diff::diff_ops::Differ;
 use rust_pgdatadiff::diff::diff_payload::DiffPayload;
 
 #[tokio::main]
-async fn main() -> Result<()> {
-  let first_db = "postgres://postgres:postgres@localhost:5438/example";
-  let second_db = "postgres://postgres:postgres@localhost:5439/example";
+async fn main() -> anyhow::Result<()> {
+    let first_db = "postgres://postgres:postgres@localhost:5438/example";
+    let second_db = "postgres://postgres:postgres@localhost:5439/example";
 
-  let payload = DiffPayload::new(
-    first_db.to_owned(),
-    second_db.to_owned(),
-    false, //only-tables
-    false, //only-sequences
-    false, //only-count
-    10_000, //chunk-size
-    0, //start-position
-    100, //max-connections
-    vec!["table1", "table2"], //include-tables (mutually exclusive with exclude-tables)
-    vec!["table3", "table4"], //exclude-tables (mutually exclusive with include-tables)
-    "public", //schema
-  );
-  let diff_result = Differ::diff_dbs(payload).await;
-  // Handle `diff_result` in any way it fits your use case
-  Ok(())
+    let payload = DiffPayload::builder()
+        .first_db(first_db)
+        .second_db(second_db)
+        .only_tables(false)
+        .only_sequences(false)
+        .only_count(false)
+        .chunk_size(10_000)
+        .start_position(0)
+        .max_connections(100)
+        .include_tables(vec!["table1", "table2"])
+        .exclude_tables(Vec::<String>::new())
+        .schema_name("public")
+        .accept_invalid_certs_first_db(false)
+        .accept_invalid_certs_second_db(false)
+        .build();
+
+    let diff_result = Differ::diff_dbs(payload).await?;
+    // Handle `diff_result` in any way it fits your use case
+    Ok(())
 }
 ```
 
@@ -145,10 +148,10 @@ export RUST_LOG=rust_pgdatadiff=info
 ```
 
 Switching from `info` to `debug` will give you more detailed logs. Also since we are utilizing
-`sqlx` under the hood, you can enable `sqlx` logs by exporting the following:
+`tokio-postgres` under the hood, you can enable its logs by exporting the following:
 
 ```shell
-export RUST_LOG=rust_pgdatadiff=info,sqlx=debug
+export RUST_LOG=rust_pgdatadiff=info,tokio_postgres=debug
 ```
 
 # Authors
