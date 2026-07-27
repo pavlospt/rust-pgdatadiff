@@ -17,7 +17,7 @@ rust-pgdatadiff.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 clap = { workspace = true, optional = true }
-inquire = { version = "0.7", optional = true }
+inquire = { version = "0.9", optional = true }
 
 [features]
 default = ["with-inquire"]
